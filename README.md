@@ -177,7 +177,7 @@ Usando relaciones de cierre:
 
 ## 👤 Autor
 
-Desarrollado por Ricardo Peredo Ortiz y el grupo de Materia fuera del equilibrio del Instituto de Física de la Universidad Autónoma de San Luis Potosí (UASLP).
+Desarrollado por Ricardo Peredo Ortiz y el grupo de Materia fuera del equilibrio del Instituto de Física de la Universidad Autónoma de San Luis Potosí (UASLP). Se hace uso de herramientas de Inteligencia Artificial (Gemini 3) para el desarrollo de este proyecto. En particular, para la estructuración y organización del código.
 
 ## 📝 Licencia
 
