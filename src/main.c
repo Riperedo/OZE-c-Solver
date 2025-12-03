@@ -48,7 +48,7 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "  --lambda_a  <double>       Parámetro lambda_a (e.g., 0.1, por defecto 0.0).\n");
     fprintf(stderr, "  --lambda_r  <double>       Parámetro lambda_r (e.g., 0.1, por defecto 0.0).\n");
     fprintf(stderr, "\nEjemplo:\n");
-    fprintf(stderr, "  %s --closure HNC --potential 1 --volfactor 0.2 --temp 1.0 --nodes 2048 --knodes 100\n\n", prog_name);
+    fprintf(stderr, "  %s--closure HNC --potential 7 --volfactor 0.2 --temp 1.0 --nodes 2048 --knodes 1024\n\n", prog_name);
 }
 
 // Función para imprimir ayuda específica según el potencial seleccionado

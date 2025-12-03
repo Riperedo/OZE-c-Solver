@@ -57,7 +57,7 @@ dirs:
 # Ejecutar ejemplo con Hertzian
 test: $(TARGET)
 	@echo "Ejecutando prueba con potencial Hertziano..."
-	@cd $(BUILD_DIR) && ./facdes_solver --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 2048 --knodes 512
+	@./$(TARGET) --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 2048 --knodes 512
 	@echo "$(GREEN)✓ Prueba completada!$(NC)"
 	@echo "Archivos generados en $(OUT_DIR)/"
 

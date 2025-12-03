@@ -8,6 +8,7 @@
  */
 
 #include "facdes2Y.h"
+#include <sys/stat.h> // For mkdir
 
 /**
  * @brief Maximum range for the radial distribution function.
@@ -69,358 +70,155 @@ double *r, *q, x[2];
  */
 double *U, *Up, *sigmaVec;
 
+// Helper function prototype
+static void solve_and_process(double volumeFactor, double Temperature, double Temperature2, 
+                            double lambda_a, double lambda_r, const gsl_vector *input_vec, 
+                            double *OutputVec, int potentialNumber, int nodesFacdes2Y,
+                            int closureID, int outputFlag, const char *filename);
+
 /**
  * @brief Calculates the Direct Correlation Function using the HNC closure.
- *
- * @param volumeFactor Volume fraction of the system.
- * @param Temperature Temperature of species 1.
- * @param Temperature2 Temperature of species 2.
- * @param lambda_a Attraction range parameter.
- * @param lambda_r Repulsion range parameter.
- * @param k Input wave vector (gsl_vector).
- * @param OutputVec Output array for the calculated function.
- * @param potentialNumber ID of the interaction potential to use.
- * @param nodesFacdes2Y Number of nodes for the solver.
  */
 void ck_HNC(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
             double *OutputVec, int potentialNumber, int nodesFacdes2Y){
-
-    int closureID = 2;   // HNC
-    int potentialID = potentialNumber;
-
-    const int nodesInput = k->size;
-    const int OutputFlag = 1;
-
-    double *rkVec, *ykVec, *xOutputVec;
-
-    rmax=160;
-
-    // Allocate memory for solver arrays and output
-    rkVec = malloc(nodesFacdes2Y * sizeof(double));
-    ykVec = malloc(nodesFacdes2Y * sizeof(double));
-    xOutputVec = malloc(nodesInput * sizeof(double));
-
-    if (rkVec == NULL || ykVec == NULL || xOutputVec == NULL) {
-        printf("Memory allocation failed in ck_HNC.\n");
-        return;
-    }
-
-    for(int i=0; i < nodesInput; i++){
-        xOutputVec[i] = (double)(k->data[i]);
-        OutputVec[i] = 0.0;
-    }
-
-    // Solve OZ equation
-    facdes2YFunc(nodesFacdes2Y, nrho, rmax, potentialID, closureID, sigma1, sigma2, Temperature, Temperature2, lambda_a, lambda_r, \
-                 volumeFactor, d, alpha, EZ, OutputFlag, ykVec, rkVec);
-
-    // Interpolate results to input grid
-    interpolationFunc(rkVec, ykVec, xOutputVec, OutputVec, nodesFacdes2Y, (int)nodesInput);
-
-    FILE *output1 = fopen("HNC_CdeK.dat", "w");
-    for (int i=0; i < nodesFacdes2Y; i++) {
-        fprintf(output1, "%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
-    }
-    fclose(output1);
-
-    free(xOutputVec);
-    free(rkVec);
-    free(ykVec);
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, k, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 2, 1, "HNC_CdeK.dat");
 }
 
 /**
  * @brief Calculates the Inverse Structure Factor using the HNC closure.
- *
- * @param volumeFactor Volume fraction of the system.
- * @param Temperature Temperature of species 1.
- * @param Temperature2 Temperature of species 2.
- * @param lambda_a Attraction range parameter.
- * @param lambda_r Repulsion range parameter.
- * @param k Input wave vector (gsl_vector).
- * @param OutputVec Output array for the calculated function.
- * @param potentialNumber ID of the interaction potential to use.
- * @param nodesFacdes2Y Number of nodes for the solver.
  */
 void is_HNC(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
             double *OutputVec, int potentialNumber, int nodesFacdes2Y){
-    
-    int closureID = 2;   // HNC
-    int potentialID = potentialNumber;
-
-    const int nodesInput = k->size;
-    const int OutputFlag = 2;
-
-    double *rkVec, *ykVec, *xOutputVec;
-
-    rmax=160;
-
-    // Allocate memory for solver arrays and output
-    rkVec = malloc(nodesFacdes2Y * sizeof(double));
-    ykVec = malloc(nodesFacdes2Y * sizeof(double));
-    xOutputVec = malloc(nodesInput * sizeof(double));
-
-    if (rkVec == NULL || ykVec == NULL || xOutputVec == NULL) {
-        printf("Memory allocation failed in is_HNC.\n");
-        return;
-    }
-
-    for(int i=0; i < nodesInput; i++){
-        xOutputVec[i] = (double)(k->data[i]);
-        OutputVec[i] = 0.0;
-    }
-
-    // Solve OZ equation
-    facdes2YFunc(nodesFacdes2Y, nrho, rmax, potentialID, closureID, sigma1, sigma2, Temperature, Temperature2, lambda_a, lambda_r, \
-                 volumeFactor, d, alpha, EZ, OutputFlag, ykVec, rkVec);
-
-    // Interpolate results to input grid
-    interpolationFunc(rkVec, ykVec, xOutputVec, OutputVec, nodesFacdes2Y, (int)nodesInput);
-
-    FILE *output1 = fopen("HNC_FT_CdeK.dat", "w");
-    for (int i=0; i < nodesFacdes2Y; i++) {
-        fprintf(output1, "%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
-    }
-    fclose(output1);
-
-    free(xOutputVec);
-    free(rkVec);
-    free(ykVec);
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, k, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 2, 2, "HNC_FT_CdeK.dat");
 }
 
 /**
  * @brief Calculates the Structure Factor using the HNC closure.
- *
- * @param volumeFactor Volume fraction of the system.
- * @param Temperature Temperature of species 1.
- * @param Temperature2 Temperature of species 2.
- * @param lambda_a Attraction range parameter.
- * @param lambda_r Repulsion range parameter.
- * @param k Input wave vector (gsl_vector).
- * @param OutputVec Output array for the calculated function.
- * @param potentialNumber ID of the interaction potential to use.
- * @param nodesFacdes2Y Number of nodes for the solver.
  */
 void sk_HNC(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
             double *OutputVec, int potentialNumber, int nodesFacdes2Y){
-
-    int closureID = 2;   // HNC
-    int potentialID = potentialNumber;
-
-    const int nodesInput = k->size;
-    const int OutputFlag = 0;
-
-    double *rkVec, *ykVec, *xOutputVec;
-
-    rmax=160;
-
-    // Allocate memory for solver arrays and output
-    rkVec = malloc(nodesFacdes2Y * sizeof(double));
-    ykVec = malloc(nodesFacdes2Y * sizeof(double));
-    xOutputVec = malloc(nodesInput * sizeof(double));
-
-    if (rkVec == NULL || ykVec == NULL || xOutputVec == NULL) {
-        printf("Memory allocation failed in sk_HNC.\n");
-        return;
-    }
-
-    for(int i=0; i < nodesInput; i++){
-        xOutputVec[i] = (double)(k->data[i]);
-        OutputVec[i] = 0.0;
-    }
-
-    // Solve OZ equation
-    facdes2YFunc(nodesFacdes2Y, nrho, rmax, potentialID, closureID, sigma1, sigma2, Temperature, Temperature2, lambda_a, lambda_r, \
-                 volumeFactor, d, alpha, EZ, OutputFlag, ykVec, rkVec);
-
-    // Interpolate results to input grid
-    interpolationFunc(rkVec, ykVec, xOutputVec, OutputVec, nodesFacdes2Y, (int)nodesInput);
-
-    FILE *output1 = fopen("HNC_SdeK.dat", "w");
-
-    for (int i=0; i < nodesFacdes2Y; i++) {
-        fprintf(output1, "%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
-        printf("%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
-    }
-    
-    fclose(output1);
-
-    free(xOutputVec);
-    free(rkVec);
-    free(ykVec);
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, k, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 2, 0, "HNC_SdeK.dat");
 }
 
 /**
  * @brief Calculates the Direct Correlation Function using the Rogers-Young closure.
- *
- * @param volumeFactor Volume fraction of the system.
- * @param Temperature Temperature of species 1.
- * @param Temperature2 Temperature of species 2.
- * @param lambda_a Attraction range parameter.
- * @param lambda_r Repulsion range parameter.
- * @param k Input wave vector (gsl_vector).
- * @param OutputVec Output array for the calculated function.
- * @param potentialNumber ID of the interaction potential to use.
- * @param nodesFacdes2Y Number of nodes for the solver.
  */
 void ck_RY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
             double *OutputVec, int potentialNumber, int nodesFacdes2Y){
-
-    int closureID = 3;   // Rogers-Young
-    int potentialID = potentialNumber;
-
-    const int nodesInput = k->size;
-    const int OutputFlag = 1;
-
-    double *rkVec, *ykVec, *xOutputVec;
-
-    rmax=160;
-
-    // Allocate memory for solver arrays and output
-    rkVec = malloc(nodesFacdes2Y * sizeof(double));
-    ykVec = malloc(nodesFacdes2Y * sizeof(double));
-    xOutputVec = malloc(nodesInput * sizeof(double));
-
-    if (rkVec == NULL || ykVec == NULL || xOutputVec == NULL) {
-        printf("Memory allocation failed in ck_RY.\n");
-        return;
-    }
-
-    for(int i=0; i < nodesInput; i++){
-        xOutputVec[i] = (double)(k->data[i]);
-        OutputVec[i] = 0.0;
-    }
-
-    // Solve OZ equation
-    facdes2YFunc(nodesFacdes2Y, nrho, rmax, potentialID, closureID, sigma1, sigma2, Temperature, Temperature2, lambda_a, lambda_r, \
-                 volumeFactor, d, alpha, EZ, OutputFlag, ykVec, rkVec);
-
-    // Interpolate results to input grid
-    interpolationFunc(rkVec, ykVec, xOutputVec, OutputVec, nodesFacdes2Y, (int)nodesInput);
-
-    FILE *output1 = fopen("RY_CdeK.dat", "w");
-    for (int i=0; i < nodesFacdes2Y; i++) {
-        fprintf(output1, "%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
-    }
-    fclose(output1);
-
-    free(xOutputVec);
-    free(rkVec);
-    free(ykVec);
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, k, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 3, 1, "RY_CdeK.dat");
 }
 
 /**
  * @brief Calculates the Inverse Structure Factor using the Rogers-Young closure.
- *
- * @param volumeFactor Volume fraction of the system.
- * @param Temperature Temperature of species 1.
- * @param Temperature2 Temperature of species 2.
- * @param lambda_a Attraction range parameter.
- * @param lambda_r Repulsion range parameter.
- * @param k Input wave vector (gsl_vector).
- * @param OutputVec Output array for the calculated function.
- * @param potentialNumber ID of the interaction potential to use.
- * @param nodesFacdes2Y Number of nodes for the solver.
  */
 void is_RY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
             double *OutputVec, int potentialNumber, int nodesFacdes2Y){
-    
-    int closureID = 3;   // Rogers-Young
-    int potentialID = potentialNumber;
-
-    const int nodesInput = k->size;
-    const int OutputFlag = 2;
-
-    double *rkVec, *ykVec, *xOutputVec;
-
-    rmax=160;
-
-    // Allocate memory for solver arrays and output
-    rkVec = malloc(nodesFacdes2Y * sizeof(double));
-    ykVec = malloc(nodesFacdes2Y * sizeof(double));
-    xOutputVec = malloc(nodesInput * sizeof(double));
-
-    if (rkVec == NULL || ykVec == NULL || xOutputVec == NULL) {
-        printf("Memory allocation failed in is_RY.\n");
-        return;
-    }
-
-    for(int i=0; i < nodesInput; i++){
-        xOutputVec[i] = (double)(k->data[i]);
-        OutputVec[i] = 0.0;
-    }
-
-    // Solve OZ equation
-    facdes2YFunc(nodesFacdes2Y, nrho, rmax, potentialID, closureID, sigma1, sigma2, Temperature, Temperature2, lambda_a, lambda_r, \
-                 volumeFactor, d, alpha, EZ, OutputFlag, ykVec, rkVec);
-
-    // Interpolate results to input grid
-    interpolationFunc(rkVec, ykVec, xOutputVec, OutputVec, nodesFacdes2Y, (int)nodesInput);
-
-    FILE *output1 = fopen("RY_FT_CdeK.dat", "w");
-    for (int i=0; i < nodesFacdes2Y; i++) {
-        fprintf(output1, "%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
-    }
-    fclose(output1);
-
-    free(xOutputVec);
-    free(rkVec);
-    free(ykVec);
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, k, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 3, 2, "RY_FT_CdeK.dat");
 }
 
 /**
  * @brief Calculates the Structure Factor using the Rogers-Young closure.
- *
- * @param volumeFactor Volume fraction of the system.
- * @param Temperature Temperature of species 1.
- * @param Temperature2 Temperature of species 2.
- * @param lambda_a Attraction range parameter.
- * @param lambda_r Repulsion range parameter.
- * @param k Input wave vector (gsl_vector).
- * @param OutputVec Output array for the calculated function.
- * @param potentialNumber ID of the interaction potential to use.
- * @param nodesFacdes2Y Number of nodes for the solver.
  */
 void sk_RY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
             double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, k, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 3, 0, "RY_SdeK.dat");
+}
 
-    int closureID = 3;   // Rogers-Young
+/**
+ * @brief Calculates the Radial Distribution Function using the HNC closure.
+ */
+void gr_HNC(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r_vec, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, r_vec, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 2, 3, "HNC_GdeR.dat");
+}
+
+/**
+ * @brief Calculates the Radial Distribution Function using the Rogers-Young closure.
+ */
+void gr_RY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r_vec, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, r_vec, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 3, 3, "RY_GdeR.dat");
+}
+
+/**
+ * @brief Generic helper function to solve OZ equation and process results.
+ * 
+ * This function encapsulates the common logic for all solver variants:
+ * 1. Memory allocation
+ * 2. Solving the OZ equation via facdes2YFunc
+ * 3. Interpolating results to the input grid
+ * 4. Writing results to file in the output/ directory
+ * 5. Cleaning up memory
+ */
+static void solve_and_process(double volumeFactor, double Temperature, double Temperature2, 
+                            double lambda_a, double lambda_r, const gsl_vector *input_vec, 
+                            double *OutputVec, int potentialNumber, int nodesFacdes2Y,
+                            int closureID, int outputFlag, const char *filename) {
+    
     int potentialID = potentialNumber;
-
-    const int nodesInput = k->size;
-    const int OutputFlag = 0;
-
+    const int nodesInput = input_vec->size;
+    
     double *rkVec, *ykVec, *xOutputVec;
-
-    rmax=160;
-
+    
+    rmax = 160;
+    
     // Allocate memory for solver arrays and output
     rkVec = malloc(nodesFacdes2Y * sizeof(double));
     ykVec = malloc(nodesFacdes2Y * sizeof(double));
     xOutputVec = malloc(nodesInput * sizeof(double));
-
+    
     if (rkVec == NULL || ykVec == NULL || xOutputVec == NULL) {
-        printf("Memory allocation failed in sk_RY.\n");
+        printf("Memory allocation failed in solve_and_process for %s.\n", filename);
+        if (rkVec) free(rkVec);
+        if (ykVec) free(ykVec);
+        if (xOutputVec) free(xOutputVec);
         return;
     }
-
+    
     for(int i=0; i < nodesInput; i++){
-        xOutputVec[i] = (double)(k->data[i]);
+        xOutputVec[i] = (double)(input_vec->data[i]);
         OutputVec[i] = 0.0;
     }
-
+    
     // Solve OZ equation
     facdes2YFunc(nodesFacdes2Y, nrho, rmax, potentialID, closureID, sigma1, sigma2, Temperature, Temperature2, lambda_a, lambda_r, \
-                 volumeFactor, d, alpha, EZ, OutputFlag, ykVec, rkVec);
-
+                 volumeFactor, d, alpha, EZ, outputFlag, ykVec, rkVec);
+    
     // Interpolate results to input grid
     interpolationFunc(rkVec, ykVec, xOutputVec, OutputVec, nodesFacdes2Y, (int)nodesInput);
-
-    FILE *output1 = fopen("RY_SdeK.dat", "w");
-    for (int i=0; i < nodesFacdes2Y; i++) {
-        fprintf(output1, "%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
+    
+    // Write to file in output/ directory
+    char filepath[256];
+    snprintf(filepath, sizeof(filepath), "output/%s", filename);
+    
+    FILE *outputFile = fopen(filepath, "w");
+    if (outputFile == NULL) {
+        // Try creating the directory if it doesn't exist (though Makefile should handle this)
+        // Or fallback to current directory if output/ fails
+        fprintf(stderr, "Warning: Could not open %s for writing. Trying local directory.\n", filepath);
+        outputFile = fopen(filename, "w");
     }
-    fclose(output1);
-
+    
+    if (outputFile != NULL) {
+        for (int i=0; i < nodesFacdes2Y; i++) {
+            fprintf(outputFile, "%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
+            // For S(k) HNC, the original code also printed to stdout. Preserving that behavior if needed, 
+            // but usually libraries shouldn't print to stdout. Removed for consistency unless requested.
+            // if (outputFlag == 0 && closureID == 2) printf("%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
+        }
+        fclose(outputFile);
+    } else {
+        fprintf(stderr, "Error: Could not open file %s for writing.\n", filename);
+    }
+    
     free(xOutputVec);
     free(rkVec);
     free(ykVec);
@@ -644,126 +442,4 @@ bool directoryExists(char *path) {
     }
   
     return false;
-}
-
-/**
- * @brief Calculates the Radial Distribution Function using the HNC closure.
- *
- * @param volumeFactor Volume fraction of the system.
- * @param Temperature Temperature of species 1.
- * @param Temperature2 Temperature of species 2.
- * @param lambda_a Attraction range parameter.
- * @param lambda_r Repulsion range parameter.
- * @param r_vec Input radial vector (gsl_vector).
- * @param OutputVec Output array for the calculated g(r).
- * @param potentialNumber ID of the interaction potential to use.
- * @param nodesFacdes2Y Number of nodes for the solver.
- */
-void gr_HNC(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r_vec, \
-            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
-
-    int closureID = 2;   // HNC
-    int potentialID = potentialNumber;
-
-    const int nodesInput = r_vec->size;
-    const int OutputFlag = 3;  // g(r) output
-
-    double *rkVec, *ykVec, *xOutputVec;
-
-    rmax=160;
-
-    // Allocate memory for solver arrays and output
-    rkVec = malloc(nodesFacdes2Y * sizeof(double));
-    ykVec = malloc(nodesFacdes2Y * sizeof(double));
-    xOutputVec = malloc(nodesInput * sizeof(double));
-
-    if (rkVec == NULL || ykVec == NULL || xOutputVec == NULL) {
-        printf("Memory allocation failed in gr_HNC.\n");
-        return;
-    }
-
-    for(int i=0; i < nodesInput; i++){
-        xOutputVec[i] = (double)(r_vec->data[i]);
-        OutputVec[i] = 0.0;
-    }
-
-    // Solve OZ equation
-    facdes2YFunc(nodesFacdes2Y, nrho, rmax, potentialID, closureID, sigma1, sigma2, Temperature, Temperature2, lambda_a, lambda_r, \
-                 volumeFactor, d, alpha, EZ, OutputFlag, ykVec, rkVec);
-
-    // Interpolate results to input grid
-    interpolationFunc(rkVec, ykVec, xOutputVec, OutputVec, nodesFacdes2Y, (int)nodesInput);
-
-    FILE *output2 = fopen("HNC_GdeR.dat", "w");
-
-    for (int i=0; i < nodesFacdes2Y; i++) {
-        fprintf(output2, "%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
-    }
-    
-    fclose(output2);
-
-    free(xOutputVec);
-    free(rkVec);
-    free(ykVec);
-}
-
-/**
- * @brief Calculates the Radial Distribution Function using the Rogers-Young closure.
- *
- * @param volumeFactor Volume fraction of the system.
- * @param Temperature Temperature of species 1.
- * @param Temperature2 Temperature of species 2.
- * @param lambda_a Attraction range parameter.
- * @param lambda_r Repulsion range parameter.
- * @param r_vec Input radial vector (gsl_vector).
- * @param OutputVec Output array for the calculated g(r).
- * @param potentialNumber ID of the interaction potential to use.
- * @param nodesFacdes2Y Number of nodes for the solver.
- */
-void gr_RY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r_vec, \
-            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
-
-    int closureID = 3;   // Rogers-Young
-    int potentialID = potentialNumber;
-
-    const int nodesInput = r_vec->size;
-    const int OutputFlag = 3;  // g(r) output
-
-    double *rkVec, *ykVec, *xOutputVec;
-
-    rmax=160;
-
-    // Allocate memory for solver arrays and output
-    rkVec = malloc(nodesFacdes2Y * sizeof(double));
-    ykVec = malloc(nodesFacdes2Y * sizeof(double));
-    xOutputVec = malloc(nodesInput * sizeof(double));
-
-    if (rkVec == NULL || ykVec == NULL || xOutputVec == NULL) {
-        printf("Memory allocation failed in gr_RY.\n");
-        return;
-    }
-
-    for(int i=0; i < nodesInput; i++){
-        xOutputVec[i] = (double)(r_vec->data[i]);
-        OutputVec[i] = 0.0;
-    }
-
-    // Solve OZ equation
-    facdes2YFunc(nodesFacdes2Y, nrho, rmax, potentialID, closureID, sigma1, sigma2, Temperature, Temperature2, lambda_a, lambda_r, \
-                 volumeFactor, d, alpha, EZ, OutputFlag, ykVec, rkVec);
-
-    // Interpolate results to input grid
-    interpolationFunc(rkVec, ykVec, xOutputVec, OutputVec, nodesFacdes2Y, (int)nodesInput);
-
-    FILE *output2 = fopen("RY_GdeR.dat", "w");
-    
-    for (int i=0; i < nodesFacdes2Y; i++) {
-        fprintf(output2, "%.17lf\t%.17lf\n", rkVec[i], ykVec[i]);
-    }
-    
-    fclose(output2);
-
-    free(xOutputVec);
-    free(rkVec);
-    free(ykVec);
 }
