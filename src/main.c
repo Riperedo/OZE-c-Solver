@@ -4,6 +4,12 @@
 #include <string.h>
 #include <gsl/gsl_vector.h>
 
+// Forward declaration of the new solver
+void solver_dipolar(int closureID, double temp, double rho, double dipole_moment, 
+                   int nodes, double rmax, const char *output_dir);
+void solver_mode2_core(int closureID, double temp, double rho, double dipole_moment, 
+                   int nodes, double rmax, const char *output_dir);
+
 // =========================================================
 // Función para Desplegar las Opciones de Potencial
 // =========================================================
@@ -26,7 +32,9 @@ void display_potential_options() {
     printf("  10  | GAUSSIAN CORE MODEL       | U = T* exp(- (r/sigma)^2 )\n");
     printf("  11  | RAMP (STEP FUNCTION)      | U lineal decreciente (tipo rampa)\n");
     printf("  12  | STEP FUNCTION (Soft Core) | U = E * (1 - r/sigma)^n (similar a Hertzian, pero se asume Step Function)\n");
+    printf("  12  | STEP FUNCTION (Soft Core) | U = E * (1 - r/sigma)^n (similar a Hertzian, pero se asume Step Function)\n");
     printf("  13  | HERTZIAN POTENTIAL (n=2.5)| U = E * (1 - r/sigma)^2.5 (r < sigma)\n");
+    printf("  14  | DIPOLAR HARD SPHERES      | Hard Spheres + Point Dipole (Non-Spherical)\n");
     printf("-------------------------------------------------------------------------\n");
     printf("\n");
     printf("Ejemplo de uso: ./facdes_solver --closure HNC --potential 13 ...\n\n");
@@ -46,7 +54,8 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "\nOpciones opcionales:\n");
     fprintf(stderr, "  --temp2     <double>       Segunda temperatura T2 (e.g., 1.0, por defecto 1.0).\n");
     fprintf(stderr, "  --lambda_a  <double>       Parámetro lambda_a (e.g., 0.1, por defecto 0.0).\n");
-    fprintf(stderr, "  --lambda_r  <double>       Parámetro lambda_r (e.g., 0.1, por defecto 0.0).\n");
+    printf("  --lambda_r  <double>       Parámetro lambda_r (e.g., 0.1, por defecto 0.0).\n");
+    printf("  --dipole    <double>       Momento dipolar mu (para potencial 14).\n");
     fprintf(stderr, "\nEjemplo:\n");
     fprintf(stderr, "  %s--closure HNC --potential 7 --volfactor 0.2 --temp 1.0 --nodes 2048 --knodes 1024\n\n", prog_name);
 }
@@ -214,6 +223,18 @@ void print_potential_help(int potentialID) {
             printf("./facdes_solver --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024\n");
             break;
 
+        case 14: // DIPOLAR HARD SPHERES
+            printf("Potencial: DIPOLAR HARD SPHERES\n");
+            printf("Ecuación: Hard Spheres + Dipolo puntual\n");
+            printf("Parámetros REQUERIDOS:\n");
+            printf("  --volfactor <double> : Factor de volumen\n");
+            printf("  --temp      <double> : Temperatura T*\n");
+            printf("  --dipole    <double> : Momento dipolar mu\n");
+            printf("  --nodes     <int>    : Nodos espaciales\n");
+            printf("Ejemplo: \n");
+            printf("./facdes_solver --closure MSA --potential 14 --volfactor 0.3 --temp 1.0 --dipole 2.0 --nodes 1024 --knodes 512\n");
+            break;
+
         default:
             printf("Potencial ID %d no tiene ayuda específica detallada aún.\n", potentialID);
             printf("Revise la lista general de potenciales.\n");
@@ -243,6 +264,7 @@ int main(int argc, char *argv[]) {
     double Temperature2 = 1.0;
     double lambda_a = 0.0;
     double lambda_r = 0.0;
+    double dipole_moment = 0.0;
     
     // Parseo de argumentos de línea de comandos
     for (int i = 1; i < argc; i++) {
@@ -260,6 +282,8 @@ int main(int argc, char *argv[]) {
             lambda_a = atof(argv[++i]);
         } else if (strcmp(argv[i], "--lambda_r") == 0 && i + 1 < argc) {
             lambda_r = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--dipole") == 0 && i + 1 < argc) {
+            dipole_moment = atof(argv[++i]);
         } else if (strcmp(argv[i], "--nodes") == 0 && i + 1 < argc) {
             nodesFacdes2Y = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--knodes") == 0 && i + 1 < argc) {
@@ -289,6 +313,52 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
+    
+    // Check for Dipolar Solver
+    if (potentialNumber == 14) {
+        if (dipole_moment <= 0.0) {
+            fprintf(stderr, "Error: Para potencial 14, --dipole debe ser > 0.\n");
+            return EXIT_FAILURE;
+        }
+
+        int closure_id_int = 0; // Default MSA
+        if (strcmp(closure_str, "LHNC") == 0) closure_id_int = 1;
+        else if (strcmp(closure_str, "QHNC") == 0) closure_id_int = 2;
+        else if (strcmp(closure_str, "RHNC") == 0) closure_id_int = 3;
+        else if (strcmp(closure_str, "HNC") == 0) closure_id_int = 1; // Fallback to LHNC for "HNC" input
+        else if (strcmp(closure_str, "MSA") == 0) closure_id_int = 0;
+        else if (strcmp(closure_str, "RY") == 0) {
+             fprintf(stderr, "Warning: RY no esta implementado para Dipolar aun. Usando LHNC.\n");
+             closure_id_int = 1;
+        }
+
+        // The input volumeFactor is the packing fraction eta. 
+        // For hard spheres, eta = (pi/6) * rho * sigma^3. With sigma=1, rho = 6 * eta / pi.
+        double rho = 6.0 * volumeFactor / M_PI;
+
+        // Call the new solver
+        solver_dipolar(closure_id_int, Temperature, rho, dipole_moment, nodesFacdes2Y, 10.0, "output"); // hardcoded rmax for now
+        return EXIT_SUCCESS;
+    }
+
+    // Check for Extended Modes 2 Solver
+    if (potentialNumber == 15) {
+        if (dipole_moment <= 0.0) {
+            fprintf(stderr, "Error: Para potencial 15, --dipole debe ser > 0.\n");
+            return EXIT_FAILURE;
+        }
+
+        int closure_id_int = 0; // Default MSA
+        if (strcmp(closure_str, "LHNC") == 0) closure_id_int = 1;
+        else if (strcmp(closure_str, "QHNC") == 0) closure_id_int = 2; // Defaulting QHNC to LHNC internally for now or leaving to fallback
+        else if (strcmp(closure_str, "HNC") == 0) closure_id_int = 1; 
+        else if (strcmp(closure_str, "MSA") == 0) closure_id_int = 0;
+        
+        double rho = 6.0 * volumeFactor / M_PI;
+        solver_mode2_core(closure_id_int, Temperature, rho, dipole_moment, nodesFacdes2Y, 10.0, "output");
+        return EXIT_SUCCESS;
+    }
+
     if (strcmp(closure_str, "HNC") != 0 && strcmp(closure_str, "RY") != 0) {
         fprintf(stderr, "Error: Cierre ('%s') no válido. Use 'HNC' o 'RY'.\n", closure_str);
         return EXIT_FAILURE;

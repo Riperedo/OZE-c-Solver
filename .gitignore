@@ -32,3 +32,6 @@ build/
 vgcore.*
 core
 core.[0-9]*
+
+# Carpetas auxiliares
+aux/

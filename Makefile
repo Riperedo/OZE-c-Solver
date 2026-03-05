@@ -13,9 +13,9 @@ BUILD_DIR = build
 OUT_DIR = output
 
 # Archivos fuente y objeto
-SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/facdes2Y.c $(SRC_DIR)/math_aux.c $(SRC_DIR)/structures.c
-HEADERS = $(INC_DIR)/facdes2Y.h $(INC_DIR)/math_aux.h $(INC_DIR)/structures.h
-OBJECTS = $(BUILD_DIR)/main.o $(BUILD_DIR)/facdes2Y.o $(BUILD_DIR)/math_aux.o $(BUILD_DIR)/structures.o
+SOURCES = $(SRC_DIR)/main.c $(SRC_DIR)/facdes2Y.c $(SRC_DIR)/math_aux.c $(SRC_DIR)/structures.c $(SRC_DIR)/structures_nonspherical.c $(SRC_DIR)/closures_nonspherical.c $(SRC_DIR)/solver_dipolar.c $(SRC_DIR)/solver_mode2.c
+HEADERS = $(INC_DIR)/facdes2Y.h $(INC_DIR)/math_aux.h $(INC_DIR)/structures.h $(INC_DIR)/structures_nonspherical.h
+OBJECTS = $(BUILD_DIR)/main.o $(BUILD_DIR)/facdes2Y.o $(BUILD_DIR)/math_aux.o $(BUILD_DIR)/structures.o $(BUILD_DIR)/structures_nonspherical.o $(BUILD_DIR)/closures_nonspherical.o $(BUILD_DIR)/solver_dipolar.o $(BUILD_DIR)/solver_mode2.o
 TARGET = $(BUILD_DIR)/facdes_solver
 
 # Colores para output
