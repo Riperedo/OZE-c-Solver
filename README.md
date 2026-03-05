@@ -1,6 +1,6 @@
 # OZE_c_solver - Solver de Ecuación de Ornstein-Zernike
 
-Solver numérico para la ecuación de Ornstein-Zernike (OZ) aplicada a sistemas coloidales. Calcula el factor de estructura **S(k)** y la función de distribución radial **g(r)** usando las aproximaciones HNC (Hypernetted Chain) y RY (Rogers-Young).
+Solver numérico para la ecuación de Ornstein-Zernike (OZ) aplicada a sistemas coloidales. Calcula el factor de estructura **S(k)** y la función de distribución radial **g(r)**. Soporta sistemas esféricos estándar (HNC, RY) y sistemas no esféricos con iteraciones pseudo-esféricas sobre invariantes rotacionales (MSA, LHNC, QHNC, RHNC) para fluidos dipolares.
 
 ## 🚀 Compilación Rápida
 
@@ -34,14 +34,19 @@ make test      # Ejecutar prueba de ejemplo
 
 ### Parámetros Obligatorios:
 
-| Parámetro     | Descripción                     | Ejemplo |
-| ------------- | ------------------------------- | ------- |
-| `--closure`   | Cierre termodinámico (HNC o RY) | `HNC`   |
-| `--potential` | ID del potencial (1-13)         | `13`    |
-| `--volfactor` | Fracción de volumen φ           | `0.3`   |
-| `--temp`      | Temperatura T*                  | `1.0`   |
-| `--nodes`     | Nodos espaciales                | `4096`  |
-| `--knodes`    | Nodos en espacio k              | `1024`  |
+| Parámetro     | Descripción                                           | Ejemplo |
+| ------------- | ----------------------------------------------------- | ------- |
+| `--closure`   | Cierre termodinámico (HNC, RY, MSA, LHNC, QHNC, RHNC) | `HNC`   |
+| `--potential` | ID del potencial (1-15)                               | `13`    |
+| `--volfactor` | Fracción de volumen φ                                 | `0.3`   |
+| `--temp`      | Temperatura T*                                        | `1.0`   |
+| `--nodes`     | Nodos espaciales                                      | `4096`  |
+| `--knodes`    | Nodos en espacio k                                    | `1024`  |
+
+### Parámetros Opcionales Adicionales:
+| Parámetro  | Descripción                                              | Ejemplo |
+| ---------- | -------------------------------------------------------- | ------- |
+| `--dipole` | Componente del momento dipolar $\mu$ (para no esféricos) | `1.0`   |
 
 ### Parámetros Opcionales:
 
@@ -53,20 +58,22 @@ make test      # Ejecutar prueba de ejemplo
 
 ## 🧪 Potenciales Disponibles
 
-| ID  | Nombre                    | Ecuación               |
-| --- | ------------------------- | ---------------------- |
-| 1   | Inverse Power Law (IPL)   | U = T* (σ/r)^λ         |
-| 2-3 | Truncated Lennard-Jones   | LJ truncado            |
-| 4   | Double Yukawa             | Atractivo + Repulsivo  |
-| 5   | Attractive Yukawa         | U ~ exp(-λr)/r         |
-| 6   | Repulsive Yukawa          | U ~ exp(-λr)/r         |
-| 7   | Hard Sphere (HS)          | U = ∞ (r<σ), 0 (r>σ)   |
-| 8   | Shoulder Function         | Potencial tipo escalón |
-| 9   | Down-Hill Function        | Lineal decreciente     |
-| 10  | Gaussian Core Model       | U = T* exp(-(r/σ)²)    |
-| 11  | Ramp (Step Function)      | U lineal tipo rampa    |
-| 12  | Step Function (Soft Core) | U = E(1-r/σ)^n         |
-| 13  | Hertzian Potential        | U = E(1-r/σ)^2.5       |
+| ID  | Nombre                    | Ecuación                                   |
+| --- | ------------------------- | ------------------------------------------ |
+| 1   | Inverse Power Law (IPL)   | U = T* (σ/r)^λ                             |
+| 2-3 | Truncated Lennard-Jones   | LJ truncado                                |
+| 4   | Double Yukawa             | Atractivo + Repulsivo                      |
+| 5   | Attractive Yukawa         | U ~ exp(-λr)/r                             |
+| 6   | Repulsive Yukawa          | U ~ exp(-λr)/r                             |
+| 7   | Hard Sphere (HS)          | U = ∞ (r<σ), 0 (r>σ)                       |
+| 8   | Shoulder Function         | Potencial tipo escalón                     |
+| 9   | Down-Hill Function        | Lineal decreciente                         |
+| 10  | Gaussian Core Model       | U = T* exp(-(r/σ)²)                        |
+| 11  | Ramp (Step Function)      | U lineal tipo rampa                        |
+| 12  | Step Function (Soft Core) | U = E(1-r/σ)^n                             |
+| 13  | Hertzian Potential        | U = E(1-r/σ)^2.5                           |
+| 14  | Dipolar Hard Spheres      | μ ≠ 0 (Modos 0 & 1, RHNC iterativo)        |
+| 15  | DHS Extended (Modes 2)    | μ ≠ 0 (Modos 0, 1, 2 acoplados, m,n \le 2) |
 
 Ver ejemplos específicos: `./build/facdes_solver --potential <ID>`
 
@@ -169,11 +176,13 @@ h(r) = c(r) + ρ ∫ c(|r-r'|) h(r') dr'
 Usando relaciones de cierre:
 - **HNC:** c(r) = exp(-βU(r) + γ(r)) - γ(r) - 1
 - **RY:** Combinación de PY y HNC con parámetro α
+- **MSA / LHNC / QHNC / RHNC:** Reducciones para partículas asimétricas (e.g. dipolos) sobre acoplamientos Wigner dependientes de base $\chi$, integrando transformadas discretas de Seno para armónicos esféricos.
 
 ## 📚 Referencias
 
 - Hansen, J. P., & McDonald, I. R. (2013). *Theory of Simple Liquids*. Academic Press.
 - Rogers, F. J., & Young, D. A. (1984). *Physical Review A*, 30(2), 999.
+- Fries, P. H. & Patey, G. N. (1985). *The solution of the RHNC equation for dipolar hard spheres and the calculation of the dielectric constant*. The Journal of Chemical Physics, 82(1), 429-446.
 
 ## 👤 Autor
 
