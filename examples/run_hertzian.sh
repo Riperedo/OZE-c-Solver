@@ -19,7 +19,7 @@ cd "$(dirname "$0")/../build" || exit 1
 
 # Ejecutar el solver
 ./facdes_solver --closure HNC --potential 13 \
-                --volfactor 0.3 --temp 1.0 \
+                --volfactor 0.8 --temp 0.5 \
                 --nodes 2048 --knodes 512
 
 echo ""

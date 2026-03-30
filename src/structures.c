@@ -427,10 +427,13 @@ void POT(species especie1, species especie2, int potentialID, double xnu) {
             // U = E * (1 - r/σ)^n, for r < σ
             double n_exponent = 2.5;
 
-            E[0] = 1.0; 
-            E[2] = 1.0;
+            //E[0] = 1.0; 
+            //E[2] = 1.0;
+            //E[1] = sqrt(E[0] * E[2]);
+            E[0] = 1.0 / especie1.temperature;
+            E[2] = 1.0 / especie2.temperature;
             E[1] = sqrt(E[0] * E[2]);
-
+            
             for (k = 0; k < ncols; k++) {
                 for (i = 0; i < nrows; i++) {
                     
@@ -448,6 +451,43 @@ void POT(species especie1, species especie2, int potentialID, double xnu) {
             printf("POTENTIAL: HERTZIAN POTENTIAL (n=2.5)\n\n");
             printf("ENERGY SCALE (epsilon/kT):  %.3lf\n", E[0]);
             printf("DIAMETER:                   %.3lf\n", sigmaVec[0]);
+            printf("------------------------------\n");
+            break;
+
+        case 16:
+            // SOFT SHOULDER POTENTIAL
+            // U = 0.5 * E * (1 - tanh(alpha * (r - lambda)))
+            E[0] = 1.0 / especie1.temperature;
+            E[2] = 1.0 / especie2.temperature;
+            E[1] = sqrt(E[0] * E[2]);
+
+            z[0]  = especie1.lambda;     // lambda (reach)
+            z[2]  = especie2.lambda;
+            z[1]  = sqrt(z[0] * z[2]);
+
+            z2[0] = especie1.lambda2;    // alpha (smoothness)
+            z2[2] = especie2.lambda2;
+            z2[1] = sqrt(z2[0] * z2[2]);
+
+            for (k = 0; k < ncols; k++) {
+                for (i = 0; i < nrows; i++) {
+                    if (r[i] < sigmaVec[k]) {
+                        U[i*ncols + k]  = 0.0;
+                        Up[i*ncols + k] = 0.0;
+                    } else {
+                        double arg = z2[k] * (r[i] - z[k]);
+                        double t_arg = tanh(arg);
+                        U[i*ncols + k]  = 0.5 * E[k] * (1.0 - t_arg);
+                        Up[i*ncols + k] = 0.5 * E[k] * z2[k] * r[i] * (1.0 - t_arg * t_arg);
+                    }
+                }
+            }
+
+            printf("POTENTIAL: SOFT SHOULDER POTENTIAL\n\n");
+            printf("TEMPERATURE:  %.3lf\n", E[0]);
+            printf("LAMBDA (REACH): %.3lf\n", z[0]);
+            printf("ALPHA (SMOOTHNESS): %.3lf\n", z2[0]);
+            printf("DIAMETER:     %.3lf\n", sigmaVec[0]);
             printf("------------------------------\n");
             break;
     }
@@ -1147,6 +1187,7 @@ void appendPotentialID(char *inputString, int potentialID) {
         case 7: strcat(inputString, "_HS"); break;
         case 8: strcat(inputString, "_STEPFUNC"); break;
         case 9: strcat(inputString, "_DOWNHILL"); break;
+        case 16: strcat(inputString, "_SOFTSHOULDER"); break;
     }
 }
 
@@ -1167,5 +1208,6 @@ void PotentialName(int potentialID, double xnu) {
         case 7: printf("POTENTIAL: HARD SPHERE"); break;
         case 8: printf("POTENTIAL: SHOULDER FUNCTION"); break;
         case 9: printf("POTENTIAL: DOWN-HILL FUNCTION"); break;
+        case 16: printf("POTENTIAL: SOFT SHOULDER POTENTIAL"); break;
     }
 }

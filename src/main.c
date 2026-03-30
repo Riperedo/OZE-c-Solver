@@ -35,6 +35,7 @@ void display_potential_options() {
     printf("  12  | STEP FUNCTION (Soft Core) | U = E * (1 - r/sigma)^n (similar a Hertzian, pero se asume Step Function)\n");
     printf("  13  | HERTZIAN POTENTIAL (n=2.5)| U = E * (1 - r/sigma)^2.5 (r < sigma)\n");
     printf("  14  | DIPOLAR HARD SPHERES      | Hard Spheres + Point Dipole (Non-Spherical)\n");
+    printf("  16  | SOFT SHOULDER POTENTIAL   | U = 0.5 * E * (1 - tanh(alpha * (r - lambda)))\n");
     printf("-------------------------------------------------------------------------\n");
     printf("\n");
     printf("Ejemplo de uso: ./facdes_solver --closure HNC --potential 13 ...\n\n");
@@ -233,6 +234,20 @@ void print_potential_help(int potentialID) {
             printf("  --nodes     <int>    : Nodos espaciales\n");
             printf("Ejemplo: \n");
             printf("./facdes_solver --closure MSA --potential 14 --volfactor 0.3 --temp 1.0 --dipole 2.0 --nodes 1024 --knodes 512\n");
+            break;
+
+        case 16: // SOFT SHOULDER POTENTIAL
+            printf("Potencial: SOFT SHOULDER POTENTIAL\n");
+            printf("Ecuación: U = 0.5 * E * (1 - tanh(alpha * (r - lambda)))\n");
+            printf("Parámetros REQUERIDOS:\n");
+            printf("  --volfactor <double> : Factor de volumen\n");
+            printf("  --temp      <double> : Escala de energía E (o T*)\n");
+            printf("  --lambda_a  <double> : Alcance del potencial (lambda)\n");
+            printf("  --lambda_r  <double> : Suavidad del hombro (alpha)\n");
+            printf("  --nodes     <int>    : Nodos espaciales\n");
+            printf("  --knodes    <int>    : Nodos en espacio k\n");
+            printf("Ejemplo: \n");
+            printf("./facdes_solver --closure HNC --potential 16 --volfactor 0.2 --temp 1.0 --lambda_a 2.0 --lambda_r 5.0 --nodes 2048 --knodes 1024\n");
             break;
 
         default:
