@@ -104,6 +104,33 @@ void sk_HNC(double volumeFactor, double Temperature, double Temperature2, double
 }
 
 /**
+ * @brief Calculates the Direct Correlation Function using the PY closure.
+ */
+void ck_PY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, k, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 1, 1, "PY_CdeK.dat");
+}
+
+/**
+ * @brief Calculates the Inverse Structure Factor using the PY closure.
+ */
+void is_PY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, k, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 1, 2, "PY_FT_CdeK.dat");
+}
+
+/**
+ * @brief Calculates the Structure Factor using the PY closure.
+ */
+void sk_PY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, k, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 1, 0, "PY_SdeK.dat");
+}
+
+/**
  * @brief Calculates the Direct Correlation Function using the Rogers-Young closure.
  */
 void ck_RY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
@@ -137,6 +164,15 @@ void gr_HNC(double volumeFactor, double Temperature, double Temperature2, double
             double *OutputVec, int potentialNumber, int nodesFacdes2Y){
     solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, r_vec, OutputVec, 
                      potentialNumber, nodesFacdes2Y, 2, 3, "HNC_GdeR.dat");
+}
+
+/**
+ * @brief Calculates the Radial Distribution Function using the PY closure.
+ */
+void gr_PY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r_vec, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, r_vec, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 1, 3, "PY_GdeR.dat");
 }
 
 /**

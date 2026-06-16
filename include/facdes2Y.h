@@ -25,6 +25,15 @@ void sk_HNC(double volumeFactor, double Temperature, double Temperature2, double
 void gr_HNC(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r, \
             double *OutputVec, int potentialNumber, int nodesFacdes2Y);
 
+void ck_PY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y);
+void is_PY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y);
+void sk_PY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y);
+void gr_PY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y);
+
 void ck_RY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \
             double *OutputVec, int potentialNumber, int nodesFacdes2Y);
 void is_RY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *k, \

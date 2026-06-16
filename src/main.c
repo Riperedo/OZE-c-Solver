@@ -46,7 +46,7 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "\nUso: %s [OPCION] [VALOR] ...\n\n", prog_name);
     fprintf(stderr, "Calcula el factor de estructura S(k) para un sistema coloidal.\n\n");
     fprintf(stderr, "Opciones requeridas:\n");
-    fprintf(stderr, "  --closure   <HNC|RY>       Cierre termodinámico (HNC o RY).\n");
+    fprintf(stderr, "  --closure   <HNC|RY|PY>    Cierre termodinámico (HNC, RY, o PY).\n");
     fprintf(stderr, "  --potential <int>          ID del potencial de interacción (e.g., 1, 2, ...).\n");
     fprintf(stderr, "  --volfactor <double>       Factor de volumen (e.g., 0.1, 0.5).\n");
     fprintf(stderr, "  --temp      <double>       Temperatura T (e.g., 1.0).\n");
@@ -374,8 +374,8 @@ int main(int argc, char *argv[]) {
         return EXIT_SUCCESS;
     }
 
-    if (strcmp(closure_str, "HNC") != 0 && strcmp(closure_str, "RY") != 0) {
-        fprintf(stderr, "Error: Cierre ('%s') no válido. Use 'HNC' o 'RY'.\n", closure_str);
+    if (strcmp(closure_str, "HNC") != 0 && strcmp(closure_str, "RY") != 0 && strcmp(closure_str, "PY") != 0) {
+        fprintf(stderr, "Error: Cierre ('%s') no válido. Use 'HNC', 'RY' o 'PY'.\n", closure_str);
         return EXIT_FAILURE;
     }
 
@@ -444,6 +444,14 @@ int main(int argc, char *argv[]) {
         
         printf("\n# Calculando g(r)...\n");
         gr_HNC(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
+               r_vec, gr_output, potentialNumber, nodesFacdes2Y);
+    } else if (strcmp(closure_str, "PY") == 0) {
+        printf("\n# Calculando S(k)...\n");
+        sk_PY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
+               k_vec, sk_output, potentialNumber, nodesFacdes2Y);
+        
+        printf("\n# Calculando g(r)...\n");
+        gr_PY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
                r_vec, gr_output, potentialNumber, nodesFacdes2Y);
     } else { // Cierre "RY"
         printf("\n# Calculando S(k)...\n");
