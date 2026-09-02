@@ -30,7 +30,7 @@ for T in temps:
             print(f"[WARN] Missing analytical file: {ana_file}")
             continue
 
-        # Run numerical solver
+        # Run numerical solver with temperature continuation
         cmd = [
             os.path.join(ROOT_DIR, "build/facdes_solver"),
             "--closure", "MSA",
@@ -38,10 +38,12 @@ for T in temps:
             "--volfactor", str(phi),
             "--temp", str(T),
             "--dipole", "1.0",
-            "--nodes", "1024",
+            "--nodes", "2048",
             "--knodes", "1024",
             "--rmax", "30.0"
         ]
+        if T < 10.0:
+            cmd += ["--temp-start", "10.0", "--temp-steps", "25"]
         
         res = subprocess.run(cmd, cwd=ROOT_DIR, capture_output=True, text=True)
         if res.returncode != 0:

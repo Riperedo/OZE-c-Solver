@@ -74,5 +74,8 @@
   - `--ramp`: Activates automatic continuation schedule with smart high-temperature default.
 - **Academic Report Updated & Synchronized**:
   - Added Section 4.5 and Table II to [`reports/msa_benchmark/msa_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.tex) detailing the temperature continuation algorithm and convergence characteristics.
+  - Re-ran full benchmark suite across all 20 states using temperature continuation, regenerating benchmark datasets in `reports/msa_benchmark/data/` and vector figures.
+  - Characterized finite-box $R_{\max}$ dipolar truncation effects ($1/r^3$ tail discretization) at strong coupling ($\beta\mu^2 \ge 10.0$).
   - Recompiled LaTeX report to [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf).
+
 
