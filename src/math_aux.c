@@ -585,33 +585,27 @@ double spherical_bessel_j2(double x) {
  * H2(k) = 4 * PI * Integral[ r^2 * f(r) * j2(kr) dr ]
  */
 void HT2_Direct(double *f, double *fk, double *r, double *k_vec, int nodes) {
+    double dr = r[1] - r[0];
     for (int i = 0; i < nodes; i++) {
         double k_val = k_vec[i];
         double sum = 0.0;
         
-        // Trapezoidal integration
         for (int j = 0; j < nodes; j++) {
              double r_val = r[j];
              double j2 = spherical_bessel_j2(k_val * r_val);
-             double term = r_val * r_val * f[j] * j2;
-             
-             double dr;
-             if (j == 0) dr = r[1] - r[0]; 
-             else if (j == nodes-1) dr = r[nodes-1] - r[nodes-2];
-             else dr = (r[j+1] - r[j-1]) / 2.0;
-
-             sum += term * dr;
+             sum += r_val * r_val * f[j] * j2;
         }
         
-        fk[i] = -4.0 * M_PI * sum; // Factor -4*pi for l=2
+        fk[i] = -4.0 * M_PI * sum * dr; // Factor -4*pi for l=2
     }
 }
 
 /**
  * @brief Inverse Hankel Transform of order 2.
- * f(r) = 1/(2*PI^2) * Integral[ k^2 * F(k) * j2(kr) dk ]
+ * f(r) = -1/(2*PI^2) * Integral[ k^2 * F(k) * j2(kr) dk ]
  */
 void IHT2_Direct(double *fk, double *f, double *r, double *k_vec, int nodes) {
+    double dk = k_vec[1] - k_vec[0];
     for (int i = 0; i < nodes; i++) {
         double r_val = r[i];
         double sum = 0.0;
@@ -619,16 +613,9 @@ void IHT2_Direct(double *fk, double *f, double *r, double *k_vec, int nodes) {
         for (int j = 0; j < nodes; j++) {
              double k_val = k_vec[j];
              double j2 = spherical_bessel_j2(k_val * r_val);
-             double term = k_val * k_val * fk[j] * j2;
-             
-             double dk;
-             if (j == 0) dk = k_vec[1] - k_vec[0];
-             else if (j == nodes-1) dk = k_vec[nodes-1] - k_vec[nodes-2];
-             else dk = (k_vec[j+1] - k_vec[j-1]) / 2.0;
-
-             sum += term * dk;
+             sum += k_val * k_val * fk[j] * j2;
         }
         
-        f[i] = -sum / (2.0 * M_PI * M_PI);
+        f[i] = -sum * dk / (2.0 * M_PI * M_PI);
     }
 }

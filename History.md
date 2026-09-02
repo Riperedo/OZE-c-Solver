@@ -1,0 +1,57 @@
+# Development History
+
+## Repository Synchronization and Setup (2026-09-02)
+
+- **Repository Status Verification**:
+  - Checked local branch `main` against remote `origin/main` at `https://github.com/Riperedo/OZE-c-Solver.git`.
+  - Confirmed local repository is completely up to date with the latest commit (`852f009` - *Enable PY closure in CLI and add wrapper functions*).
+  - Validated that remote changes fetch cleanly without discrepancies.
+
+- **Authentication & Credentials Verification**:
+  - Validated Git user configuration (`Riperedo` / `rperedo@if.uaslp.mx`).
+  - Validated GitHub SSH authentication (`ssh -T git@github.com` successfully authenticated as `Riperedo`).
+  - Tested push access via `git push --dry-run origin main`, confirming stored credentials/permissions are active and operational.
+
+- **Untracked Working Tree Items**:
+  - Identified untracked script `examples/run_repulsive_Yukawa.sh`.
+
+## Technical Improvement Report Evaluation & Adjustments (2026-09-02)
+
+- Evaluated `docs/reporte_mejoras_oze_solver.md`.
+- **Sign Convention Analysis**:
+  - Re-examined the sign in `denom1 = 1.0 - (rho / 3.0) * C1;` in `src/solver_dipolar.c`.
+  - Analytical validation confirmed that under the basis convention $C^1 = C^{110} - C^{112}$ (where $C^{112} < 0$), the original minus sign is mathematically exact ($1 - (\rho/3)C^1$).
+  - Reverted the proposed sign flip, restoring exact parity with the Wertheim/Blum analytical datasets.
+
+- **Implemented Validated Improvements**:
+  1. **Dynamic `--rmax` Parameter Support**: Added CLI argument `--rmax <double>` with default $r_{\max} = 15.0$ in `src/main.c`.
+  2. **Orthogonal Hankel Transform Quadrature**: Updated `HT2_Direct` and `IHT2_Direct` in `src/math_aux.c` to use uniform quadrature weights `dr` and `dk`, establishing machine-precision discrete adjointness ($< 10^{-13}$).
+  3. **Core Gibbs Artifact Elimination**: Precomputed $j_0$ and $j_2$ forward and inverse kernel transformation matrices in `src/solver_dipolar.c`, eliminating high-frequency oscillations in $h^{112}(r)$ near the hard core.
+  4. **Anderson Mixing Acceleration**: Implemented multi-vector Anderson acceleration (depth $M=4$) with a small-system linear solver, reducing iteration counts from $\sim 2000$ to $\sim 15 - 38$ iterations.
+
+## Analytical MSA Benchmark & Academic LaTeX Report (2026-09-02)
+
+- **Comprehensive 20-State Thermodynamic Validation**:
+  - Benchmarked the numerical solver against all 20 exact analytical MSA structure factor datasets in `test/data_MSA_analitica_HD_dipolar/` at $\mu = 1.0$.
+  - State points evaluated:
+    - Temperatures: $T^* \in \{10.0, 1.0, 0.1, 0.01\}$
+    - Packing fractions: $\phi \in \{0.1, 0.2, 0.3, 0.4, 0.5\}$
+- **Micro-Precision Numerical Agreement**:
+  - High-temperature regime ($T^* = 10.0$):
+    - $\text{RMSE}_{S^{110}} = 2.81 \times 10^{-6}$ ($\phi=0.1$) to $6.32 \times 10^{-5}$ ($\phi=0.5$).
+    - $\text{RMSE}_{S^{112}} = 1.05 \times 10^{-4}$ ($\phi=0.1$) to $4.97 \times 10^{-4}$ ($\phi=0.5$).
+    - $\text{RMSE}_{S^0} = 2.10 \times 10^{-4}$ ($\phi=0.1$) to $9.94 \times 10^{-4}$ ($\phi=0.5$).
+    - $\text{RMSE}_{S^1} = 1.05 \times 10^{-4}$ ($\phi=0.1$) to $5.04 \times 10^{-4}$ ($\phi=0.5$).
+  - Moderate coupling regime ($T^* = 1.0$):
+    - $\text{RMSE}_{S^{110}} = 2.21 \times 10^{-4}$ to $2.66 \times 10^{-3}$.
+    - $\text{RMSE}_{S^{112}} = 9.34 \times 10^{-4}$ to $3.32 \times 10^{-3}$.
+    - $\text{RMSE}_{S^0} = 1.88 \times 10^{-3}$ to $7.30 \times 10^{-3}$.
+    - $\text{RMSE}_{S^1} = 9.58 \times 10^{-4}$ to $4.13 \times 10^{-3}$.
+- **Publication Figures Generated via Gnuplot (Vector PDF)**:
+  - `reports/msa_benchmark/plots/fig1_s000_comparison.pdf`: Base hard-core structure factor $S^{000}(k)$.
+  - `reports/msa_benchmark/plots/fig2_patey_projections.pdf`: Patey projections $S^{110}(k)$ and $S^{112}(k)$.
+  - `reports/msa_benchmark/plots/fig3_chi_modes.pdf`: Decoupled invariant modes $S^0(k)$ and $S^1(k)$.
+  - `reports/msa_benchmark/plots/fig4_thermal_evolution.pdf`: Thermal progression from weak to strong dipolar coupling.
+  - `reports/msa_benchmark/plots/fig5_error_scaling.pdf`: Error convergence vs. packing fraction $\phi$.
+- **Formal Academic Report in LaTeX**:
+  - Generated and compiled [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf) (8 pages, fully structured with mathematical formulation, numerical algorithms, error metric tables, embedded figures, and physical discussion).

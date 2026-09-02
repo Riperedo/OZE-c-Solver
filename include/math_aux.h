@@ -26,6 +26,7 @@ void intt(double *h, double dr, double *sft);
 void FT(double *c, double *c1, double *rk, double dr);
 void FFT(double *inputData, double rmax, int isDirect);
 
+double spherical_bessel_j2(double x);
 void HT2_Direct(double *f, double *fk, double *r, double *k_vec, int nodes);
 void IHT2_Direct(double *fk, double *f, double *r, double *k_vec, int nodes);
 void sinft(double *y, int nmax);
