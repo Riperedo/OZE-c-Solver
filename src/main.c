@@ -6,7 +6,8 @@
 
 // Forward declaration of the new solver
 void solver_dipolar(int closureID, double temp, double rho, double dipole_moment, 
-                   int nodes, double rmax, const char *output_dir);
+                    int nodes, double rmax, const char *output_dir,
+                    double temp_start, int ramp_steps);
 void solver_mode2_core(int closureID, double temp, double rho, double dipole_moment, 
                    int nodes, double rmax, const char *output_dir);
 
@@ -55,11 +56,14 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "\nOpciones opcionales:\n");
     fprintf(stderr, "  --temp2     <double>       Segunda temperatura T2 (e.g., 1.0, por defecto 1.0).\n");
     fprintf(stderr, "  --lambda_a  <double>       Parámetro lambda_a (e.g., 0.1, por defecto 0.0).\n");
-    printf("  --lambda_r  <double>       Parámetro lambda_r (e.g., 0.1, por defecto 0.0).\n");
-    printf("  --dipole    <double>       Momento dipolar mu (para potencial 14 y 15).\n");
-    printf("  --rmax      <double>       Radio espacial máximo r_max (por defecto 15.0 para dipolos / 10.0 esférico).\n");
+    fprintf(stderr, "  --lambda_r  <double>       Parámetro lambda_r (e.g., 0.1, por defecto 0.0).\n");
+    fprintf(stderr, "  --dipole    <double>       Momento dipolar mu (para potencial 14 y 15).\n");
+    fprintf(stderr, "  --rmax      <double>       Radio espacial máximo r_max (por defecto 15.0 para dipolos / 10.0 esférico).\n");
+    fprintf(stderr, "  --temp-start <double>      Temperatura inicial de rampa (continuation method).\n");
+    fprintf(stderr, "  --temp-steps <int>         Número de pasos en la rampa de temperatura (defecto 10).\n");
+    fprintf(stderr, "  --ramp                     Activa rampa geométrica automática de temperatura.\n");
     fprintf(stderr, "\nEjemplo:\n");
-    fprintf(stderr, "  %s--closure HNC --potential 7 --volfactor 0.2 --temp 1.0 --nodes 2048 --knodes 1024\n\n", prog_name);
+    fprintf(stderr, "  %s --closure HNC --potential 7 --volfactor 0.2 --temp 1.0 --nodes 2048 --knodes 1024\n\n", prog_name);
 }
 
 // Función para imprimir ayuda específica según el potencial seleccionado
@@ -282,6 +286,9 @@ int main(int argc, char *argv[]) {
     double lambda_r = 0.0;
     double dipole_moment = 0.0;
     double rmax_val = 15.0; // Default rmax (15.0 for dipoles)
+    double temp_start = -1.0; // Default: no temperature ramping
+    int temp_steps = 10;      // Number of continuation stages
+    int use_ramp = 0;         // Flag for automatic temperature ramping
     
     // Parseo de argumentos de línea de comandos
     for (int i = 1; i < argc; i++) {
@@ -303,6 +310,12 @@ int main(int argc, char *argv[]) {
             dipole_moment = atof(argv[++i]);
         } else if (strcmp(argv[i], "--rmax") == 0 && i + 1 < argc) {
             rmax_val = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--temp-start") == 0 && i + 1 < argc) {
+            temp_start = atof(argv[++i]);
+        } else if (strcmp(argv[i], "--temp-steps") == 0 && i + 1 < argc) {
+            temp_steps = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--ramp") == 0) {
+            use_ramp = 1;
         } else if (strcmp(argv[i], "--nodes") == 0 && i + 1 < argc) {
             nodesFacdes2Y = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--knodes") == 0 && i + 1 < argc) {
@@ -332,7 +345,6 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
-    
     // Check for Dipolar Solver
     if (potentialNumber == 14) {
         if (dipole_moment <= 0.0) {
@@ -351,12 +363,17 @@ int main(int argc, char *argv[]) {
              closure_id_int = 1;
         }
 
+        // Handle temperature ramping defaults
+        if (use_ramp && temp_start <= 0.0) {
+            temp_start = (Temperature < 2.0) ? 5.0 : Temperature * 2.0;
+        }
+
         // The input volumeFactor is the packing fraction eta. 
         // For hard spheres, eta = (pi/6) * rho * sigma^3. With sigma=1, rho = 6 * eta / pi.
         double rho = 6.0 * volumeFactor / M_PI;
 
-        // Call the new solver
-        solver_dipolar(closure_id_int, Temperature, rho, dipole_moment, nodesFacdes2Y, rmax_val, "output");
+        // Call the new solver with temperature continuation support
+        solver_dipolar(closure_id_int, Temperature, rho, dipole_moment, nodesFacdes2Y, rmax_val, "output", temp_start, temp_steps);
         return EXIT_SUCCESS;
     }
 

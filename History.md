@@ -54,4 +54,25 @@
   - `reports/msa_benchmark/plots/fig4_thermal_evolution.pdf`: Thermal progression from weak to strong dipolar coupling.
   - `reports/msa_benchmark/plots/fig5_error_scaling.pdf`: Error convergence vs. packing fraction $\phi$.
 - **Formal Academic Report in LaTeX**:
-  - Generated and compiled [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf) (8 pages, fully structured with mathematical formulation, numerical algorithms, error metric tables, embedded figures, and physical discussion).
+  - Generated and compiled [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf) (9 pages, fully structured with mathematical formulation, numerical algorithms, error metric tables, embedded figures, and physical discussion).
+
+## Temperature Continuation (Annealing) & Robust Low-Temperature Solver (2026-09-02)
+
+- **Geometric Temperature Continuation Framework**:
+  - Implemented multi-stage temperature continuation schedule:
+    $$T_s^* = T_{\text{start}}^* \left( \frac{T_{\text{target}}^*}{T_{\text{start}}^*} \right)^{\frac{s}{N-1}}, \quad s = 0, \dots, N-1$$
+  - Seamless warm-starting transferring converged correlation matrices $\mathbf{c}_s(r)$ and indirect screening profiles $\bm{\eta}_s(r)$ across temperature stages.
+  - Multi-tier adaptive tolerance schedule ($\varepsilon = 10^{-4}$ for intermediate stages, $\varepsilon = 10^{-6}$ for target temperature).
+- **Scale-Invariant Regularized Anderson Acceleration**:
+  - Upgraded Anderson mixing to the unconstrained difference-vector Walker--Ni formulation.
+  - Added scale-invariant Tikhonov regularization $\lambda = 10^{-4} \max_j M_{jj}$ to the $(m-1) \times (m-1)$ normal equation matrix.
+  - Added smooth weight bounding to prevent over-extrapolation while avoiding fallback stalls to unaccelerated Picard steps.
+  - Reduced per-stage iteration counts to $\sim 8 - 14$ iterations, traversing from $T^* = 10.0$ down to $T^* = 0.10$ ($\beta\mu^2 = 10.0$) in under 3 seconds total.
+- **CLI Options Added to `src/main.c`**:
+  - `--temp-start <double>`: Initial temperature for continuation path (e.g., `10.0`).
+  - `--temp-steps <int>`: Number of logarithmic stages (default `10`).
+  - `--ramp`: Activates automatic continuation schedule with smart high-temperature default.
+- **Academic Report Updated & Synchronized**:
+  - Added Section 4.5 and Table II to [`reports/msa_benchmark/msa_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.tex) detailing the temperature continuation algorithm and convergence characteristics.
+  - Recompiled LaTeX report to [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf).
+

@@ -17,6 +17,14 @@ void closure_RHNC_dipolar(double **c, double **h, double **eta, double *r, int n
  *        using Gaussian elimination with partial pivoting.
  */
 static int solve_small_system(int n, double A[6][6], double b[6], double x[6]) {
+    double initial_norm = 0.0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (fabs(A[i][j]) > initial_norm) initial_norm = fabs(A[i][j]);
+        }
+    }
+    if (initial_norm < 1e-30) return 0;
+
     for (int i = 0; i < n; i++) {
         int max_row = i;
         double max_val = fabs(A[i][i]);
@@ -26,7 +34,7 @@ static int solve_small_system(int n, double A[6][6], double b[6], double x[6]) {
                 max_row = k;
             }
         }
-        if (max_val < 1e-13) return 0; // Singular matrix
+        if (max_val < 1e-12 * initial_norm) return 0; // Scale-invariant relative check
         if (max_row != i) {
             for (int k = i; k < n; k++) {
                 double tmp = A[i][k];
@@ -46,7 +54,7 @@ static int solve_small_system(int n, double A[6][6], double b[6], double x[6]) {
         }
     }
     for (int i = n - 1; i >= 0; i--) {
-        if (fabs(A[i][i]) < 1e-13) return 0;
+        if (fabs(A[i][i]) < 1e-12 * initial_norm) return 0;
         double sum = b[i];
         for (int j = i + 1; j < n; j++) {
             sum -= A[i][j] * x[j];
@@ -154,7 +162,8 @@ void compute_HS_reference(double *c_HS, double *h_HS, double *r, double *k,
  * @brief Main solver function for Dipolar Hard Spheres.
  */
 void solver_dipolar(int closureID, double temp, double rho, double dipole_moment, 
-                   int nodes, double rmax, const char *output_dir) {
+                    int nodes, double rmax, const char *output_dir,
+                    double temp_start, int ramp_steps) {
     
     printf("Initializing Dipolar Solver...\n");
     printf("Closure: %d (0=MSA, 1=LHNC, 2=QHNC, 3=RHNC)\n", closureID);
@@ -204,8 +213,6 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
         }
     }
 
-    double beta = 1.0 / temp;
-    double beta_mu2 = beta * dipole_moment * dipole_moment;
     double sigma = 1.0;
 
     // Hard Sphere Reference for RHNC
@@ -217,19 +224,23 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
         compute_HS_reference(c_HS, h_HS, r, k, nodes, dr, rho, sigma, K0_fwd, K0_inv);
     }
 
-    // 2. Initialization 
-    closure_MSA_dipolar(c->data, eta->data, r, nodes, beta_mu2, sigma);
-
-    // 3. Iteration Loop with Anderson Mixing Acceleration
-    int max_iter = 1000;
-    double tolerance = 1e-6;
-    double error = 1.0;
-    int iter = 0;
-    double alpha = 0.5; // Anderson damping factor
+    // Determine Temperature Continuation Schedule
+    int num_stages = (temp_start > temp && ramp_steps > 1) ? ramp_steps : 1;
+    double *T_stages = malloc(num_stages * sizeof(double));
+    if (num_stages > 1) {
+        double ratio = pow(temp / temp_start, 1.0 / (num_stages - 1));
+        for (int s = 0; s < num_stages; s++) {
+            T_stages[s] = temp_start * pow(ratio, s);
+        }
+        T_stages[num_stages - 1] = temp;
+        printf("Temperature Continuation Enabled: %d stages from T*=%.4f down to T*=%.4f\n", 
+               num_stages, temp_start, temp);
+    } else {
+        T_stages[0] = temp;
+    }
 
     // History for Anderson mixing (depth M = 4)
     const int M_DEPTH = 4;
-    int hist_count = 0;
     int total_dim = n_projections * nodes;
     double *c_hist[4];
     double *d_hist[4];
@@ -238,149 +249,205 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
         d_hist[m] = malloc(total_dim * sizeof(double));
     }
 
-    printf("Starting Iteration with Anderson Mixing Acceleration...\n");
     ProjectionMatrix *c_new_mat = create_projection_matrix(n_projections, nodes);
+    double tolerance = 1e-6;
+    double alpha = 0.5; // Anderson damping factor
 
-    while (iter < max_iter && error > tolerance) {
-        
-        // A. Forward Hankel Transforms c(r) -> C(k)
-        for (int i = 0; i < nodes; i++) {
-            double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
-            const double *row0 = &K0_fwd[i * nodes];
-            const double *row2 = &K2_fwd[i * nodes];
-            for (int j = 0; j < nodes; j++) {
-                sum0 += row0[j] * c->data[0][j];
-                sum1 += row0[j] * c->data[1][j];
-                sum2 += row2[j] * c->data[2][j];
-            }
-            C_k->data[0][i] = sum0;
-            C_k->data[1][i] = sum1;
-            C_k->data[2][i] = sum2;
+    // --- Temperature Continuation Loop ---
+    for (int stage = 0; stage < num_stages; stage++) {
+        double current_T = T_stages[stage];
+        double beta = 1.0 / current_T;
+        double beta_mu2 = beta * dipole_moment * dipole_moment;
+
+        if (num_stages > 1) {
+            printf("\n>>> [Continuation Stage %d/%d] Target T* = %.4f (beta*mu^2 = %.3f) <<<\n", 
+                   stage + 1, num_stages, current_T, beta_mu2);
         }
 
-        // B. Solve OZ in k-space
-        solve_oz_k_space(C_k->data, H_k->data, nodes, rho);
-
-        // C. Inverse Hankel Transforms H(k) -> h(r)
-        for (int i = 0; i < nodes; i++) {
-            double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
-            const double *row0 = &K0_inv[i * nodes];
-            const double *row2 = &K2_inv[i * nodes];
-            for (int j = 0; j < nodes; j++) {
-                sum0 += row0[j] * H_k->data[0][j];
-                sum1 += row0[j] * H_k->data[1][j];
-                sum2 += row2[j] * H_k->data[2][j];
-            }
-            h->data[0][i] = sum0;
-            h->data[1][i] = sum1;
-            h->data[2][i] = sum2;
-        }
-
-        // D. Calculate Eta = h - c
-        for (int p = 0; p < n_projections; p++) {
-            for (int i = 0; i < nodes; i++) {
-                eta->data[p][i] = h->data[p][i] - c->data[p][i];
-                c_new_mat->data[p][i] = c->data[p][i];
-            }
-        }
-
-        // E. Apply Closure Relation
-        if (closureID == 0) {
-            closure_MSA_dipolar(c_new_mat->data, eta->data, r, nodes, beta_mu2, sigma);
-        } else if (closureID == 1) {
-            closure_LHNC_dipolar(c_new_mat->data, h->data, eta->data, r, nodes, beta_mu2, sigma);
-        } else if (closureID == 2) {
-            closure_QHNC_dipolar(c_new_mat->data, h->data, eta->data, r, nodes, beta_mu2, sigma);
-        } else if (closureID == 3) {
-            closure_RHNC_dipolar(c_new_mat->data, h->data, eta->data, r, nodes, beta_mu2, sigma, c_HS, h_HS);
-        }
-
-        // F. Compute L2 residual error d = c_new - c
-        error = 0.0;
-        double *d_curr = malloc(total_dim * sizeof(double));
-        double *c_curr = malloc(total_dim * sizeof(double));
-        int idx = 0;
-        for (int p = 0; p < n_projections; p++) {
-            for (int i = 0; i < nodes; i++) {
-                double diff = c_new_mat->data[p][i] - c->data[p][i];
-                d_curr[idx] = diff;
-                c_curr[idx] = c->data[p][i];
-                error += diff * diff;
-                idx++;
-            }
-        }
-        error = sqrt(error / total_dim);
-
-        if (iter % 10 == 0 || error <= tolerance) {
-            printf("Iter %4d: Error = %.5e\n", iter, error);
-        }
-
-        if (error <= tolerance) {
-            free(d_curr);
-            free(c_curr);
-            iter++;
-            break;
-        }
-
-        // Update Anderson history buffer
-        if (hist_count < M_DEPTH) {
-            memcpy(c_hist[hist_count], c_curr, total_dim * sizeof(double));
-            memcpy(d_hist[hist_count], d_curr, total_dim * sizeof(double));
-            hist_count++;
+        if (stage == 0) {
+            closure_MSA_dipolar(c->data, eta->data, r, nodes, beta_mu2, sigma);
         } else {
-            // Shift history
-            double *tmp_c = c_hist[0];
-            double *tmp_d = d_hist[0];
-            for (int m = 0; m < M_DEPTH - 1; m++) {
-                c_hist[m] = c_hist[m + 1];
-                d_hist[m] = d_hist[m + 1];
+            // Update dipole tail outside core for the new temperature
+            for (int i = 0; i < nodes; i++) {
+                if (r[i] > sigma) {
+                    c->data[2][i] = beta_mu2 / pow(r[i], 3.0);
+                }
             }
-            c_hist[M_DEPTH - 1] = tmp_c;
-            d_hist[M_DEPTH - 1] = tmp_d;
-            memcpy(c_hist[M_DEPTH - 1], c_curr, total_dim * sizeof(double));
-            memcpy(d_hist[M_DEPTH - 1], d_curr, total_dim * sizeof(double));
         }
 
-        // Apply Anderson Mixing if history >= 2
-        int applied_anderson = 0;
-        if (hist_count >= 2) {
-            int m = hist_count;
-            double Amat[6][6] = {0};
-            double bvec[6] = {0};
-            double xvec[6] = {0};
+        int hist_count = 0;
+        int iter = 0;
+        double error = 1.0;
+        double stage_tol = (stage < num_stages - 1) ? 1e-4 : tolerance;
+        int max_iter_stage = 1000;
 
-            // Compute Gram matrix G_ab = <d_a, d_b>
-            for (int a = 0; a < m; a++) {
-                for (int b = a; b < m; b++) {
-                    double dot = 0.0;
-                    for (int k_idx = 0; k_idx < total_dim; k_idx++) {
-                        dot += d_hist[a][k_idx] * d_hist[b][k_idx];
-                    }
-                    Amat[a][b] = dot;
-                    Amat[b][a] = dot;
+        while (iter < max_iter_stage && error > stage_tol) {
+            
+            // A. Forward Hankel Transforms c(r) -> C(k)
+            for (int i = 0; i < nodes; i++) {
+                double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
+                const double *row0 = &K0_fwd[i * nodes];
+                const double *row2 = &K2_fwd[i * nodes];
+                for (int j = 0; j < nodes; j++) {
+                    sum0 += row0[j] * c->data[0][j];
+                    sum1 += row0[j] * c->data[1][j];
+                    sum2 += row2[j] * c->data[2][j];
                 }
-                Amat[a][m] = 1.0;
-                Amat[m][a] = 1.0;
+                C_k->data[0][i] = sum0;
+                C_k->data[1][i] = sum1;
+                C_k->data[2][i] = sum2;
             }
-            Amat[m][m] = 0.0;
-            bvec[m] = 1.0;
 
-            if (solve_small_system(m + 1, Amat, bvec, xvec)) {
-                // Check stability of weights
-                double weight_sum = 0.0;
-                int stable = 1;
-                for (int j = 0; j < m; j++) {
-                    weight_sum += fabs(xvec[j]);
-                    if (fabs(xvec[j]) > 50.0) stable = 0;
+            // B. Solve OZ in k-space
+            solve_oz_k_space(C_k->data, H_k->data, nodes, rho);
+
+            // C. Inverse Hankel Transforms H(k) -> h(r)
+            for (int i = 0; i < nodes; i++) {
+                double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
+                const double *row0 = &K0_inv[i * nodes];
+                const double *row2 = &K2_inv[i * nodes];
+                for (int j = 0; j < nodes; j++) {
+                    sum0 += row0[j] * H_k->data[0][j];
+                    sum1 += row0[j] * H_k->data[1][j];
+                    sum2 += row2[j] * H_k->data[2][j];
                 }
-                if (stable && weight_sum < 100.0) {
+                h->data[0][i] = sum0;
+                h->data[1][i] = sum1;
+                h->data[2][i] = sum2;
+            }
+
+            // D. Calculate Eta = h - c
+            for (int p = 0; p < n_projections; p++) {
+                for (int i = 0; i < nodes; i++) {
+                    eta->data[p][i] = h->data[p][i] - c->data[p][i];
+                    c_new_mat->data[p][i] = c->data[p][i];
+                }
+            }
+
+            // E. Apply Closure Relation
+            if (closureID == 0) {
+                closure_MSA_dipolar(c_new_mat->data, eta->data, r, nodes, beta_mu2, sigma);
+            } else if (closureID == 1) {
+                closure_LHNC_dipolar(c_new_mat->data, h->data, eta->data, r, nodes, beta_mu2, sigma);
+            } else if (closureID == 2) {
+                closure_QHNC_dipolar(c_new_mat->data, h->data, eta->data, r, nodes, beta_mu2, sigma);
+            } else if (closureID == 3) {
+                closure_RHNC_dipolar(c_new_mat->data, h->data, eta->data, r, nodes, beta_mu2, sigma, c_HS, h_HS);
+            }
+
+            // F. Compute L2 residual error d = c_new - c
+            error = 0.0;
+            double *d_curr = malloc(total_dim * sizeof(double));
+            double *c_curr = malloc(total_dim * sizeof(double));
+            int idx = 0;
+            for (int p = 0; p < n_projections; p++) {
+                for (int i = 0; i < nodes; i++) {
+                    double diff = c_new_mat->data[p][i] - c->data[p][i];
+                    d_curr[idx] = diff;
+                    c_curr[idx] = c->data[p][i];
+                    error += diff * diff;
+                    idx++;
+                }
+            }
+            error = sqrt(error / total_dim);
+
+            if (iter % 10 == 0 || error <= stage_tol) {
+                printf("Iter %4d: Error = %.5e\n", iter, error);
+            }
+
+            if (error <= stage_tol) {
+                free(d_curr);
+                free(c_curr);
+                iter++;
+                break;
+            }
+
+            // Update Anderson history buffer
+            if (hist_count < M_DEPTH) {
+                memcpy(c_hist[hist_count], c_curr, total_dim * sizeof(double));
+                memcpy(d_hist[hist_count], d_curr, total_dim * sizeof(double));
+                hist_count++;
+            } else {
+                // Shift history
+                double *tmp_c = c_hist[0];
+                double *tmp_d = d_hist[0];
+                for (int m = 0; m < M_DEPTH - 1; m++) {
+                    c_hist[m] = c_hist[m + 1];
+                    d_hist[m] = d_hist[m + 1];
+                }
+                c_hist[M_DEPTH - 1] = tmp_c;
+                d_hist[M_DEPTH - 1] = tmp_d;
+                memcpy(c_hist[M_DEPTH - 1], c_curr, total_dim * sizeof(double));
+                memcpy(d_hist[M_DEPTH - 1], d_curr, total_dim * sizeof(double));
+            }
+
+            // Apply Anderson Mixing if history >= 2 (Walker-Ni formulation)
+            int applied_anderson = 0;
+            if (hist_count >= 2) {
+                int m = hist_count;
+                int K = m - 1; // Dimension of difference system
+                double Amat[6][6] = {0};
+                double bvec[6] = {0};
+                double gamma_vec[6] = {0};
+
+                // Compute Delta d_j = d_hist[j] - d_hist[K]
+                // Amat[j][k] = <Delta d_j, Delta d_k>, bvec[j] = -<Delta d_j, d_hist[K]>
+                for (int j = 0; j < K; j++) {
+                    for (int k_idx = j; k_idx < K; k_idx++) {
+                        double dot = 0.0;
+                        for (int idx_pt = 0; idx_pt < total_dim; idx_pt++) {
+                            double dd_j = d_hist[j][idx_pt] - d_hist[K][idx_pt];
+                            double dd_k = d_hist[k_idx][idx_pt] - d_hist[K][idx_pt];
+                            dot += dd_j * dd_k;
+                        }
+                        Amat[j][k_idx] = dot;
+                        Amat[k_idx][j] = dot;
+                    }
+
+                    double dot_rhs = 0.0;
+                    for (int idx_pt = 0; idx_pt < total_dim; idx_pt++) {
+                        double dd_j = d_hist[j][idx_pt] - d_hist[K][idx_pt];
+                        dot_rhs += dd_j * d_hist[K][idx_pt];
+                    }
+                    bvec[j] = -dot_rhs;
+                }
+
+                // Scale-invariant Tikhonov regularization
+                double max_diag = 0.0;
+                for (int j = 0; j < K; j++) {
+                    if (Amat[j][j] > max_diag) max_diag = Amat[j][j];
+                }
+                double lambda = (max_diag > 1e-16) ? 1e-4 * max_diag : 1e-12;
+                for (int j = 0; j < K; j++) {
+                    Amat[j][j] += lambda;
+                }
+
+                if (solve_small_system(K, Amat, bvec, gamma_vec)) {
+                    double gamma_last = 1.0;
+                    for (int j = 0; j < K; j++) {
+                        gamma_last -= gamma_vec[j];
+                    }
+
+                    // Smoothly bound extrapolation weights if excessive
+                    double max_w = fabs(gamma_last);
+                    for (int j = 0; j < K; j++) {
+                        if (fabs(gamma_vec[j]) > max_w) max_w = fabs(gamma_vec[j]);
+                    }
+                    if (max_w > 5.0) {
+                        double scale = 5.0 / max_w;
+                        for (int j = 0; j < K; j++) gamma_vec[j] *= scale;
+                        gamma_last = 1.0;
+                        for (int j = 0; j < K; j++) gamma_last -= gamma_vec[j];
+                    }
+
                     idx = 0;
                     for (int p = 0; p < n_projections; p++) {
                         for (int i = 0; i < nodes; i++) {
                             double val = 0.0;
-                            for (int j = 0; j < m; j++) {
-                                val += xvec[j] * (c_hist[j][idx] + alpha * d_hist[j][idx]);
+                            for (int j = 0; j < K; j++) {
+                                val += gamma_vec[j] * (c_hist[j][idx] + alpha * d_hist[j][idx]);
                             }
+                            val += gamma_last * (c_hist[K][idx] + alpha * d_hist[K][idx]);
                             c->data[p][i] = val;
                             idx++;
                         }
@@ -388,23 +455,28 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
                     applied_anderson = 1;
                 }
             }
-        }
 
-        // Fallback to standard damped Picard update
-        if (!applied_anderson) {
-            for (int p = 0; p < n_projections; p++) {
-                for (int i = 0; i < nodes; i++) {
-                    c->data[p][i] += alpha * (c_new_mat->data[p][i] - c->data[p][i]);
+            // Fallback to standard damped Picard update
+            if (!applied_anderson) {
+                for (int p = 0; p < n_projections; p++) {
+                    for (int i = 0; i < nodes; i++) {
+                        c->data[p][i] += alpha * (c_new_mat->data[p][i] - c->data[p][i]);
+                    }
                 }
             }
+
+            free(d_curr);
+            free(c_curr);
+            iter++;
         }
 
-        free(d_curr);
-        free(c_curr);
-        iter++;
+        if (num_stages > 1) {
+            printf(">>> Stage %d/%d (T*=%.4f) completed in %d iterations (Error = %.3e) <<<\n", 
+                   stage + 1, num_stages, current_T, iter, error);
+        }
     }
 
-    printf("Iter %4d: Error = %.5e  [DONE]\n", iter, error);
+    free(T_stages);
     free_projection_matrix(c_new_mat);
 
     // Free Anderson history
