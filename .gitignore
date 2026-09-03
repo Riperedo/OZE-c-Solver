@@ -49,3 +49,7 @@ aux/
 # Copyrighted Scanned Figures
 test/data_Monte_Carlo_Simulations/**/*.png
 test/**/*.png
+
+# Private Local Development History
+History.md
+
