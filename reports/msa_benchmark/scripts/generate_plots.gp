@@ -10,6 +10,10 @@ set style line 3 lc rgb '#009E73' lt 1 lw 2.5 pt 9   ps 0.7  # Green solid
 set style line 4 lc rgb '#CC79A7' lt 2 lw 2.5 pt 8   ps 0.7  # Purple dashed
 set style line 5 lc rgb '#F0E442' lt 1 lw 2.5 pt 5   ps 0.7  # Yellow solid
 set style line 6 lc rgb '#000000' lt 2 lw 2.5 pt 4   ps 0.7  # Black dashed
+set style line 7 lc rgb '#D55E00' lt 1 lw 2.5 pt 11  ps 0.7  # Vermilion solid
+set style line 8 lc rgb '#56B4E9' lt 2 lw 2.5 pt 10  ps 0.7  # Sky blue dashed
+set style line 9 lc rgb '#E69F00' lt 1 lw 2.5 pt 12  ps 0.7  # Orange solid
+set style line 10 lc rgb '#999999' lt 2 lw 2.5 pt 13 ps 0.7  # Grey dashed
 
 set grid lc rgb '#E0E0E0' lt 1 lw 0.8
 set tics font "Helvetica,11"
@@ -150,25 +154,29 @@ set title "Dipolar Anisotropy S^{112}(k)" font "Helvetica,12"
 set xlabel "Wavenumber k {/Symbol s}"
 set ylabel "S^{112}(k)"
 set xrange [0:18]
-set yrange [-1.2:0.2]
+set yrange [-6.0:0.5]
 set key bottom right
 plot "reports/msa_benchmark/data/ana_phi_0.2_T_10.00.dat" u 1:4 w l ls 2 title "T*=10.0 (Analytic)", \
      "reports/msa_benchmark/data/num_phi_0.2_T_10.00.dat" u 1:4 every 4 w p ls 1 title "T*=10.0 (Numerical)", \
      "reports/msa_benchmark/data/ana_phi_0.2_T_1.00.dat" u 1:4 w l ls 4 title "T*=1.0 (Analytic)", \
      "reports/msa_benchmark/data/num_phi_0.2_T_1.00.dat" u 1:4 every 4 w p ls 3 title "T*=1.0 (Numerical)", \
      "reports/msa_benchmark/data/ana_phi_0.2_T_0.10.dat" u 1:4 w l ls 6 title "T*=0.1 (Analytic)", \
-     "reports/msa_benchmark/data/num_phi_0.2_T_0.10.dat" u 1:4 every 4 w p ls 5 title "T*=0.1 (Numerical)"
+     "reports/msa_benchmark/data/num_phi_0.2_T_0.10.dat" u 1:4 every 4 w p ls 5 title "T*=0.1 (Numerical)", \
+     "reports/msa_benchmark/data/ana_phi_0.2_T_0.01.dat" u 1:4 w l ls 8 title "T*=0.01 (Analytic)", \
+     "reports/msa_benchmark/data/num_phi_0.2_T_0.01.dat" u 1:4 every 4 w p ls 7 title "T*=0.01 (Numerical)"
 
 # Right: S1 mode across temperatures
 set title "Decoupled Mode S^1(k)" font "Helvetica,12"
 set ylabel "S^1(k)"
-set yrange [0.7:3.5]
+set yrange [0.0:18.0]
 set key top right
 plot "reports/msa_benchmark/data/ana_phi_0.2_T_10.00.dat" u 1:6 w l ls 2 title "T*=10.0 (Analytic)", \
      "reports/msa_benchmark/data/num_phi_0.2_T_10.00.dat" u 1:6 every 4 w p ls 1 title "T*=10.0 (Numerical)", \
      "reports/msa_benchmark/data/ana_phi_0.2_T_1.00.dat" u 1:6 w l ls 4 title "T*=1.0 (Analytic)", \
      "reports/msa_benchmark/data/num_phi_0.2_T_1.00.dat" u 1:6 every 4 w p ls 3 title "T*=1.0 (Numerical)", \
      "reports/msa_benchmark/data/ana_phi_0.2_T_0.10.dat" u 1:6 w l ls 6 title "T*=0.1 (Analytic)", \
-     "reports/msa_benchmark/data/num_phi_0.2_T_0.10.dat" u 1:6 every 4 w p ls 5 title "T*=0.1 (Numerical)"
+     "reports/msa_benchmark/data/num_phi_0.2_T_0.10.dat" u 1:6 every 4 w p ls 5 title "T*=0.1 (Numerical)", \
+     "reports/msa_benchmark/data/ana_phi_0.2_T_0.01.dat" u 1:6 w l ls 8 title "T*=0.01 (Analytic)", \
+     "reports/msa_benchmark/data/num_phi_0.2_T_0.01.dat" u 1:6 every 4 w p ls 7 title "T*=0.01 (Numerical)"
 
 unset multiplot
