@@ -89,5 +89,18 @@
 - **Low-Temperature & Physical Branch Analysis ($T^* = 0.10$ and $T^* = 0.01$)**:
   - Analyzed the physical stability of Wertheim MSA: in the MSA decoupling, $S^1(k) = [1 - (\rho/3) C^1(k)]^{-1}$.
   - At high and moderate temperatures ($T^* = 10.0$ and $T^* = 1.0$), numerical and analytical structure factors agree to $10^{-6}$ and $10^{-4}$ RMSE respectively across all volume fractions $\phi \in [0.1, 0.5]$.
-  - As temperature drops to $T^* = 0.10$ ($\beta\mu^2 = 10.0$), the continuation solver accurately computes the core polarization function $c_{\text{core}}^{112}(r)$ to cancel the large dipolar tail, matching analytical predictions with $\text{RMSE} \approx 10^{-3} - 10^{-2}$.
-  - Identified that at extreme couplings ($T^* \to 0.01$, $\beta\mu^2 = 100.0$), the denominator $1 - (\rho/3)C^1(0)$ approaches 0 ($0.0614$), which increases the spectral radius of the Picard operator $\rho(J) > 1$. Demonstrated via Jacobian-Free Newton-Krylov (JFNK) that Newton-based solvers resolve the stiff regime efficiently.
+    - As temperature drops to $T^* = 0.10$ ($\beta\mu^2 = 10.0$), the continuation solver accurately computes the core polarization function $c_{\text{core}}^{112}(r)$ to cancel the large dipolar tail, matching analytical predictions with $\text{RMSE} \approx 10^{-3} - 10^{-2}$.
+    - Identified that at extreme couplings ($T^* \to 0.01$, $\beta\mu^2 = 100.0$), the denominator $1 - (\rho/3)C^1(0)$ approaches 0 ($0.0614$), which increases the spectral radius of the Picard operator $\rho(J) > 1$. Demonstrated via Jacobian-Free Newton-Krylov (JFNK) that Newton-based solvers resolve the stiff regime efficiently.
+
+## 2D Thermodynamic Parameter Space RMSE Heatmaps (2026-09-02)
+
+- **Publication-Quality 2D Heatmap Suite (`reports/msa_benchmark/scripts/generate_heatmap.py`)**:
+  - Implemented 4-panel logarithmic heatmap visualizer mapping Root Mean Square Error (RMSE) across packing fraction $\phi \in [0.1, 0.5]$ and temperature $T^* \in [0.01, 10.0]$:
+    - Panel (a): Dipolar direct projection $\text{RMSE}(S^{110})$.
+    - Panel (b): Dipolar anisotropy projection $\text{RMSE}(S^{112})$.
+    - Panel (c): Decoupled transverse mode $\text{RMSE}(S^1)$.
+    - Panel (d): Hard-sphere base projection $\text{RMSE}(S^{000})$.
+  - Directly annotated cell values in scientific notation with automated contrast thresholding for readability.
+- **LaTeX Academic Report Enhanced (Figure 6)**:
+  - Added Section 4.6 and Figure 6 to [`reports/msa_benchmark/msa_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.tex).
+  - Recompiled 10-page academic benchmark document [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf).

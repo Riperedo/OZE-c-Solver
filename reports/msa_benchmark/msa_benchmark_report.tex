@@ -271,6 +271,25 @@ As shown in Table~\ref{tab:continuation}, the continuation solver traverses two 
 
 Furthermore, continuation tests down to $T^* = 0.044$ ($\beta\mu^2 \approx 22.8$) converge smoothly, revealing the operational limit of the linear MSA closure before approaching the Wertheim spinodal singularity. This continuation framework provides an essential numerical foundation for exploring non-linear closures (such as LHNC and QHNC) where cold starts are notoriously prone to bifurcation failure.
 
+\subsection{Parameter Space Heatmaps across \texorpdfstring{$(\phi, T^*)$}{(phi, T*)}}
+
+To provide a comprehensive assessment across the full two-dimensional thermodynamic phase space $(\phi, T^*)$, Figure~\ref{fig:heatmap} presents logarithmic color maps of the Root Mean Square Error (RMSE) for all structure factor components.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{plots/fig6_rmse_heatmap.pdf}
+    \caption{Two-dimensional RMSE heatmaps across the $(\phi, T^*)$ thermodynamic parameter space for: (a) dipolar projection $S^{110}(k)$, (b) anisotropic projection $S^{112}(k)$, (c) decoupled mode $S^1(k)$, and (d) base hard-core projection $S^{000}(k)$. Exact numerical values are annotated in each grid cell.}
+    \label{fig:heatmap}
+\end{figure}
+
+The heatmap visualization clearly highlights the three characteristic operational regimes:
+\begin{enumerate}
+    \item \textbf{Micro-Accuracy High-Temperature Regime ($T^* = 10.0$)}: Across all packing fractions $\phi \in [0.1, 0.5]$, the solver achieves errors on the order of $\text{RMSE} \sim 10^{-6}$--$10^{-5}$ (bright yellow cells), proving exact analytical agreement.
+    \item \textbf{Moderate Coupling Regime ($T^* = 1.0$)}: Errors remain low ($\text{RMSE} \sim 10^{-4}$--$10^{-3}$, teal green cells), with a slight monotonic increase at higher density reflecting hard-core boundary steepening.
+    \item \textbf{Ultra-Strong Coupling Regime ($T^* \le 0.01$)}: The Wertheim pole singularity ($1 - \frac{\rho}{3}C^1 \to 0$) renders fixed-point Picard iterations linearly unstable, illustrating the necessity of Newton-Krylov methods for sub-critical dielectric transitions.
+    \item \textbf{Decoupled Reference Base ($S^{000}$)}: Panel (d) demonstrates strict temperature independence of $S^{000}(k)$ errors, validating the exact separation of isotropic excluded-volume and anisotropic electrostatic channels in MSA theory.
+\end{enumerate}
+
 \section{Discussion and Conclusions}
 
 The benchmark results confirm several key findings:
