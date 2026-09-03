@@ -83,6 +83,91 @@ static inline double analytical_dipolar_tail_k(double k_val, double beta_mu2, do
 }
 
 /**
+ * @brief Loads a 4-column analytical structure factor file (k, S000, S110, S112)
+ * and linearly interpolates the curves onto the solver's discrete k-grid.
+ */
+static int load_analytical_sk(const char *filepath, const double *k_grid, int nodes,
+                              double *S000_out, double *S110_out, double *S112_out) {
+    FILE *f = fopen(filepath, "r");
+    if (!f) {
+        fprintf(stderr, "Error: Could not open init-sk file: %s\n", filepath);
+        return -1;
+    }
+
+    int cap = 2048;
+    double *k_file = malloc(cap * sizeof(double));
+    double *s000_file = malloc(cap * sizeof(double));
+    double *s110_file = malloc(cap * sizeof(double));
+    double *s112_file = malloc(cap * sizeof(double));
+    int count = 0;
+
+    char line[512];
+    while (fgets(line, sizeof(line), f)) {
+        if (line[0] == '#' || line[0] == '\n' || line[0] == '\r') continue;
+        double kv, s0, s1, s2;
+        if (sscanf(line, "%lf %lf %lf %lf", &kv, &s0, &s1, &s2) == 4) {
+            if (count >= cap) {
+                cap *= 2;
+                k_file = realloc(k_file, cap * sizeof(double));
+                s000_file = realloc(s000_file, cap * sizeof(double));
+                s110_file = realloc(s110_file, cap * sizeof(double));
+                s112_file = realloc(s112_file, cap * sizeof(double));
+            }
+            k_file[count] = kv;
+            s000_file[count] = s0;
+            s110_file[count] = s1;
+            s112_file[count] = s2;
+            count++;
+        }
+    }
+    fclose(f);
+
+    if (count < 2) {
+        fprintf(stderr, "Error: Insufficient data points in %s (found %d)\n", filepath, count);
+        free(k_file); free(s000_file); free(s110_file); free(s112_file);
+        return -1;
+    }
+
+    for (int i = 0; i < nodes; i++) {
+        double target_k = k_grid[i];
+        if (target_k <= k_file[0]) {
+            S000_out[i] = s000_file[0];
+            S110_out[i] = s110_file[0];
+            S112_out[i] = s112_file[0];
+        } else if (target_k >= k_file[count - 1]) {
+            double k_max_f = k_file[count - 1];
+            double decay = exp(-(target_k - k_max_f) / 10.0);
+            S000_out[i] = 1.0 + (s000_file[count - 1] - 1.0) * decay;
+            S110_out[i] = s110_file[count - 1] * decay;
+            S112_out[i] = s112_file[count - 1] * decay;
+        } else {
+            int low = 0, high = count - 1;
+            while (low <= high) {
+                int mid = (low + high) / 2;
+                if (k_file[mid] <= target_k) {
+                    low = mid + 1;
+                } else {
+                    high = mid - 1;
+                }
+            }
+            int idx = high;
+            if (idx < 0) idx = 0;
+            if (idx >= count - 1) idx = count - 2;
+            double t = (target_k - k_file[idx]) / (k_file[idx + 1] - k_file[idx]);
+            S000_out[i] = s000_file[idx] + t * (s000_file[idx + 1] - s000_file[idx]);
+            S110_out[i] = s110_file[idx] + t * (s110_file[idx + 1] - s110_file[idx]);
+            S112_out[i] = s112_file[idx] + t * (s112_file[idx + 1] - s112_file[idx]);
+        }
+    }
+
+    free(k_file);
+    free(s000_file);
+    free(s110_file);
+    free(s112_file);
+    return 0;
+}
+
+/**
  * @brief Solves the OZ equation in k-space for Dipolar Hard Spheres.
  *
  * Uses the chi-basis decoupling (Blum/Wertheim) which reduces the coupled
@@ -181,7 +266,7 @@ void compute_HS_reference(double *c_HS, double *h_HS, double *r, double *k,
  */
 void solver_dipolar(int closureID, double temp, double rho, double dipole_moment, 
                     int nodes, double rmax, const char *output_dir,
-                    double temp_start, int ramp_steps) {
+                    double temp_start, int ramp_steps, const char *init_sk_file) {
     
     printf("Initializing Dipolar Solver...\n");
     printf("Closure: %d (0=MSA, 1=LHNC, 2=QHNC, 3=RHNC)\n", closureID);
@@ -243,7 +328,8 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
     }
 
     // Determine Temperature Continuation Schedule
-    int num_stages = (temp_start > temp && ramp_steps > 1) ? ramp_steps : 1;
+    int num_stages = (init_sk_file != NULL && strlen(init_sk_file) > 0) ? 1 :
+                     ((temp_start > temp && ramp_steps > 1) ? ramp_steps : 1);
     double *T_stages = malloc(num_stages * sizeof(double));
     if (num_stages > 1) {
         double ratio = pow(temp / temp_start, 1.0 / (num_stages - 1));
@@ -269,7 +355,6 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
 
     ProjectionMatrix *c_new_mat = create_projection_matrix(n_projections, nodes);
     double tolerance = 1e-6;
-    double alpha = 0.5; // Anderson damping factor
 
     // --- Temperature Continuation Loop ---
     for (int stage = 0; stage < num_stages; stage++) {
@@ -283,7 +368,65 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
         }
 
         if (stage == 0) {
-            closure_MSA_dipolar(c->data, eta->data, r, nodes, beta_mu2, sigma);
+            if (init_sk_file != NULL && strlen(init_sk_file) > 0) {
+                printf("Loading Analytical S(k) from %s for Direct Warm-Start...\n", init_sk_file);
+                double *S000_in = malloc(nodes * sizeof(double));
+                double *S110_in = malloc(nodes * sizeof(double));
+                double *S112_in = malloc(nodes * sizeof(double));
+                if (load_analytical_sk(init_sk_file, k, nodes, S000_in, S110_in, S112_in) == 0) {
+                    double *C000_k = malloc(nodes * sizeof(double));
+                    double *C110_k = malloc(nodes * sizeof(double));
+                    double *C112_core_k = malloc(nodes * sizeof(double));
+
+                    for (int i = 0; i < nodes; i++) {
+                        C000_k[i] = (1.0 - 1.0 / S000_in[i]) / rho;
+
+                        double S0_val = (S110_in[i] + 1.0) + 2.0 * S112_in[i];
+                        double S1_val = (S110_in[i] + 1.0) - S112_in[i];
+
+                        double C0_val = (3.0 / rho) * (1.0 - 1.0 / S0_val);
+                        double C1_val = (3.0 / rho) * (1.0 - 1.0 / S1_val);
+
+                        C110_k[i] = (C0_val + 2.0 * C1_val) / 3.0;
+                        double C112_val = (C0_val - C1_val) / 3.0;
+
+                        double C_tail_k_val = analytical_dipolar_tail_k(k[i], beta_mu2, sigma);
+                        C112_core_k[i] = C112_val - C_tail_k_val;
+                    }
+
+                    for (int j = 0; j < nodes; j++) {
+                        double c0_val = 0.0, c1_val = 0.0, c2_val = 0.0;
+                        const double *row0 = &K0_inv[j * nodes];
+                        const double *row2 = &K2_inv[j * nodes];
+                        for (int i = 0; i < nodes; i++) {
+                            c0_val += row0[i] * C000_k[i];
+                            c1_val += row0[i] * C110_k[i];
+                            c2_val += row2[i] * C112_core_k[i];
+                        }
+                        if (r[j] < sigma) {
+                            c->data[0][j] = c0_val;
+                            c->data[1][j] = c1_val;
+                            c->data[2][j] = c2_val;
+                        } else {
+                            c->data[0][j] = 0.0;
+                            c->data[1][j] = 0.0;
+                            c->data[2][j] = beta_mu2 / pow(r[j], 3.0);
+                        }
+                    }
+
+                    free(C000_k);
+                    free(C110_k);
+                    free(C112_core_k);
+                    printf("Analytical direct correlation initialization c(r) complete.\n");
+                } else {
+                    closure_MSA_dipolar(c->data, eta->data, r, nodes, beta_mu2, sigma);
+                }
+                free(S000_in);
+                free(S110_in);
+                free(S112_in);
+            } else {
+                closure_MSA_dipolar(c->data, eta->data, r, nodes, beta_mu2, sigma);
+            }
         } else {
             // Update dipole tail outside core for the new temperature
             for (int i = 0; i < nodes; i++) {
@@ -475,7 +618,7 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
                             val += gamma_vec[j] * (c_hist[j][pt] + alpha * d_hist[j][pt]);
                         }
                         val += gamma_last * (c_hist[K][pt] + alpha * d_hist[K][pt]);
-                        if (isnan(val) || isinf(val) || fabs(val) > 500.0) {
+                        if (isnan(val) || isinf(val) || fabs(val) > 1e6) {
                             val_valid = 0;
                             break;
                         }

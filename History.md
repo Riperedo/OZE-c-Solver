@@ -103,4 +103,95 @@
   - Directly annotated cell values in scientific notation with automated contrast thresholding for readability.
 - **LaTeX Academic Report Enhanced (Figure 6)**:
   - Added Section 4.6 and Figure 6 to [`reports/msa_benchmark/msa_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.tex).
-  - Recompiled 10-page academic benchmark document [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf).
+  - Recompiled academic benchmark document [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf).
+
+## Direct Analytical Structure Factor Ingestion & Warm-Start Benchmarking (2026-09-02)
+
+- **Standardized 4-Column Structure Factor Dataset Preparation (`data/input_sk/`)**:
+  - Extracted standardized 4-column files `(k, S000, S110, S112)` from raw analytical data in `test/data_MSA_analitica_HD_dipolar/`.
+  - Stored 20 standardized files: `data/input_sk/sk_phi_<phi>_T_<T>.dat` for all $(\phi, T^*)$ combinations.
+- **Analytical Inversion Pipeline in C (`src/solver_dipolar.c`)**:
+  - Implemented `load_analytical_sk()` parser with robust 1D linear grid interpolation onto the solver's $k$-mesh.
+  - Implemented exact Blum-Wertheim algebraic mode reconstruction:
+    $$S^0(k) = (S^{110}(k) + 1) + 2 S^{112}(k), \quad S^1(k) = (S^{110}(k) + 1) - S^{112}(k)$$
+  - Directly computed Fourier-space direct correlations:
+    $$C^{000}(k) = \frac{1}{\rho}\left(1 - \frac{1}{S^{000}(k)}\right), \quad C^0(k) = \frac{3}{\rho}\left(1 - \frac{1}{S^0(k)}\right), \quad C^1(k) = \frac{3}{\rho}\left(1 - \frac{1}{S^1(k)}\right)$$
+  - Evaluated core direct correlation functions $c(r < \sigma)$ via discrete orthogonal inverse Hankel transforms after exact $C_{\text{tail}}^{112}(k)$ tail subtraction.
+- **CLI Integration (`src/main.c`)**:
+  - Added `--init-sk <path>` command-line option to feed analytical structure factors directly into `solver_dipolar`.
+- **Low-Temperature Evaluations Without Continuation Ramps ($T^* = 0.10$ and $T^* = 0.01$)**:
+  - Evaluated all 10 state points directly with warm-start:
+    - At $T^* = 0.10$ ($\beta\mu^2 = 10.0$): Converged to tolerance $\mathcal{L}_2 < 10^{-6}$ in 18 to 89 iterations across all $\phi \in [0.1, 0.5]$ without needing any intermediate continuation steps.
+    - At $T^* = 0.01$ ($\beta\mu^2 = 100.0$): Successfully converged to tolerance $< 10^{-6}$ directly for $\phi = 0.1$ (41 iterations) and $\phi = 0.2$ (509 iterations).
+- **Publication Figures & LaTeX Report Enhanced**:
+  - Generated Figure 7 (`reports/msa_benchmark/plots/fig7_ana_init_benchmark.pdf` and `.png`) comparing numerical vs. analytical profiles under direct warm-start.
+  - Added Section 4.7 ("Direct Analytical Structure Factor Initialization") and Table~\ref{tab:ana_init_results} to [`reports/msa_benchmark/msa_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.tex).
+  - Recompiled 12-page academic report [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf).
+
+## Ingestion Asymptotics & Anderson Acceleration Enhancement (2026-09-03)
+
+- **High-$k$ Asymptotic Extrapolation in `load_analytical_sk`**:
+  - Implemented smooth exponential asymptotic extrapolation for $k > k_{\text{max}}^{\text{file}}$:
+    $$S^{000}(k) \to 1.0, \quad S^{110}(k) \to 0.0, \quad S^{112}(k) \to 0.0$$
+  - Eliminated high-frequency truncation artifacts in the inverse Hankel transform, reducing initial warm-start residual error by an order of magnitude (e.g. from $\mathcal{L}_2 = 3.73$ down to $0.51$).
+- **Unconstrained Anderson Acceleration Threshold Upgrade**:
+  - Identified that at ultra-low temperatures ($T^* = 0.01$, $\beta\mu^2 = 100.0$), large core direct correlations ($|c^{110}| \approx 540$) previously exceeded a legacy fixed threshold of $500.0$, causing unaccelerated Picard fallbacks.
+  - Raised the validation safety threshold to $10^6$ in `src/solver_dipolar.c`, restoring full Anderson acceleration at strong couplings.
+  - **Performance Impact**: Reduced iteration count for $(\phi=0.2, T^*=0.01)$ from **509 iterations down to 63 iterations** (an $8\times$ acceleration).
+
+## Three-Phase Benchmark Architecture & Reproducibility Suite (2026-09-03)
+
+- **Systematic Three-Phase Solver Validation**:
+  - **Phase 1 (Cold Start / No Initializer)**: Benchmarked standard $\mathbf{c}^{(0)}=\mathbf{0}$ solver with Anderson mixing across all 20 states. Validated micro-precision agreement for $T^* \ge 1.0$ (8--48 iterations) and identified linear stagnation at strong couplings ($T^* \le 0.10, \phi \ge 0.4$).
+  - **Phase 2 (Temperature Continuation Ramps)**: Validated multi-stage geometric annealing schedule ($T^* = 10.0 \to 0.10$). Reconstructed 2D phase-space RMSE heatmaps (Figure 6) and thermal progression profiles (Figure 4).
+  - **Phase 3 (Direct Analytical S(k) Warm-Start)**: Validated direct ingestion of standardized 4-column `.dat` files (`data/input_sk/`). Bypassed continuation ramps completely at $T^* = 0.10$ (17--103 iterations) and resolved ultra-low temperatures at $T^* = 0.01$ (31 and 63 iterations).
+- **Comprehensive Reproducibility & Automation Tooling**:
+  - Standardized all 20 analytical reference datasets in `data/input_sk/sk_phi_<phi>_T_<T>.dat` with format `[k, S000, S110, S112]`.
+  - Created standalone benchmark runners: `reports/msa_benchmark/scripts/run_phase1_cold_start.py`, `run_phase2_ramps.py`, `run_phase3_ana_init.py`, and master script `run_all_phases.sh`.
+  - Extended root [`Makefile`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/Makefile) with dedicated targets: `benchmark-phase1`, `benchmark-phase2`, `benchmark-phase3`, `benchmark-plots`, `report`, and `benchmark-all`.
+  - Structured Section 4 in [`reports/msa_benchmark/msa_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.tex) and recompiled the 13-page academic report [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf).
+
+## Monte Carlo Benchmark & Multi-Closure Evaluation: MSA, LHNC, and QHNC (2026-09-03)
+
+- **Independent Benchmark Suite against Monte Carlo Computer Simulations**:
+  - Developed a standalone validation pipeline comparing integral equation closures against the milestone Monte Carlo simulations of Fries and Patey (*J. Chem. Phys.* **82**, 429, 1985) for dipolar hard spheres (DHS).
+  - Evaluated high-density liquid state ($\rho^* = 0.80$, $\phi \approx 0.4189$) under strong dipolar couplings:
+    - State 1: $\rho^* = 0.80, \mu^{*2} = 2.75$ ($T^* \approx 0.363636$).
+    - State 2: $\rho^* = 0.80, \mu^{*2} = 2.00$ ($T^* = 0.500000$).
+  - Scanned Monte Carlo datasets analyzed:
+    - Fig 1a \& 1b: Radial distribution $g^{000}(r)$ at $\mu^{*2} = 2.75$ (contact $r \in [1.0, 1.6]\sigma$ and medium range $r \in [1.0, 4.0]\sigma$).
+    - Fig 2a \& 2b: Radial distribution $g^{000}(r)$ at $\mu^{*2} = 2.00$ (contact $r \in [1.0, 1.6]\sigma$ and medium range $r \in [1.0, 4.0]\sigma$).
+    - Fig 3: Dipolar angular projection $h^{110}(r)$ at $\mu^{*2} = 2.00$ ($r \in [1.0, 4.0]\sigma$).
+    - Fig 4: Anisotropic angular projection $h^{112}(r)$ at $\mu^{*2} = 2.00$ ($r \in [1.0, 4.0]\sigma$).
+
+- **QHNC Numerical Stabilization in C Codebase (`src/closures_nonspherical.c`)**:
+  - Upgraded the Quadratic Hypernetted-Chain (`closure_QHNC_dipolar`) formulation to the exact logarithmic representation:
+    $$c^{000}(r) = h^{000}(r) - \ln\left(g^{000}(r)\right) + \ln\left(1 + Q(r)\right)$$
+    where $Q(r) = \frac{1}{3}(\eta^{110})^2 + \frac{2}{3}(\eta^{112} + \beta\mu^2/r^3)^2$.
+  - Eliminated numerical stiffness and overflow in the quadratic polarization channel, enabling smooth Anderson acceleration convergence in 61 iterations at $\mu^{*2}=2.00$ and 89 iterations at $\mu^{*2}=2.75$.
+
+- **Three Operational Evaluation Phases**:
+  - **Phase 1 (Cold Start)**: Evaluated raw Picard--Anderson performance without initializers ($\mathbf{c}^{(0)} = \mathbf{0}$). MSA (65--101 iters) and LHNC (130--157 iters) converged directly; QHNC stalled due to large initial non-linear residual.
+  - **Phase 2 (Temperature Continuation Annealing)**: Geometric schedule ($T^* = 10.0 \to T^*$) achieved 100\% convergence reliability across all closures (MSA: 19--52 iters, LHNC: 45--67 iters, QHNC: 61--89 iters).
+  - **Phase 3 (Warm-Start Ingestion)**: Structure factor warm-starting yielded near-instantaneous convergence (LHNC: 1 iter, QHNC: 75--110 iters).
+
+- **Physical Microstructural Findings**:
+  - **Contact Peak Discrepancies**: MSA severely underestimates the contact radial peak ($g(1^+)$ RMSE $\approx 0.812$ at $\mu^{*2}=2.75$) due to missing $c^{000}$ core-exclusion non-linearities. LHNC reduces RMSE to $0.0987$, while QHNC achieves **$0.0576$**.
+  - **Dipolar Angular Alignment**: Linear MSA completely misses the strong parallel alignment peak ($h^{110}(1^+) \approx 3.2$ vs $<0.5$). QHNC traces both the contact peak and the secondary structural coordination shoulder at $r \approx 2.05\sigma$ with remarkable fidelity ($\text{RMSE} \approx 0.104$).
+  - **Anisotropic Attraction**: QHNC and LHNC match the strong head-to-tail attraction $h^{112}(r)$ with $\text{RMSE} \approx 0.173$, outperforming MSA by over 55\%.
+
+- **Independent Academic LaTeX Report & Publication Figures**:
+  - Authored standalone report [`reports/monte_carlo_benchmark/monte_carlo_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/monte_carlo_benchmark_report.tex) and compiled 9-page PDF [`reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf).
+  - Generated all 6 publication figures in vector PDF and PNG (`reports/monte_carlo_benchmark/plots/`):
+    - `fig1_g000_mu2_2.75`: Contact & medium range $g^{000}(r)$ at $\mu^{*2}=2.75$.
+    - `fig2_g000_mu2_2.0`: Contact & medium range $g^{000}(r)$ at $\mu^{*2}=2.00$.
+    - `fig3_h110_mu2_2.0`: Dipolar projection $h^{110}(r)$ vs. MC.
+    - `fig4_h112_mu2_2.0`: Anisotropic projection $h^{112}(r)$ vs. MC.
+    - `fig5_error_comparison`: Multi-closure RMSE comparison bar chart.
+    - `fig6_convergence_phases`: Computational cost and iteration progression across Phases 1, 2, and 3.
+
+- **Reproducibility Tooling & Copyright Protection**:
+  - Created automated test runner [`reports/monte_carlo_benchmark/scripts/run_mc_benchmarks.py`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/scripts/run_mc_benchmarks.py) and plot generator [`reports/monte_carlo_benchmark/scripts/generate_mc_plots.py`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/scripts/generate_mc_plots.py).
+  - Extended [`Makefile`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/Makefile) with `benchmark-mc`, `plots-mc`, `report-mc`, and `mc-all`.
+  - Updated [`.gitignore`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/.gitignore) to un-ignore test `.dat` files while strictly preventing tracking of copyrighted `.png` scanned images in `test/`.
+

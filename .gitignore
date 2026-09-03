@@ -10,6 +10,8 @@ build/*.o
 # Archivos de salida
 *.dat
 output/*.dat
+!test/**/*.dat
+!reports/**/*.dat
 
 # Directorios de compilación
 build/
@@ -41,3 +43,7 @@ aux/
 *.out
 *.toc
 *.synctex.gz
+
+# Copyrighted Scanned Figures
+test/data_Monte_Carlo_Simulations/**/*.png
+test/**/*.png

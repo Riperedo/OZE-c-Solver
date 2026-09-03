@@ -83,7 +83,7 @@ void closure_QHNC_dipolar(double **c, double **h, double **eta, double *r, int n
             double quad_term = (term112*term112 + term110*term110) / 6.0;
 
             if (g000 > 1e-12) {
-                c[0][i] = h000 - log(g000) + quad_term;
+                c[0][i] = h000 - log(g000) + log(1.0 + quad_term);
             } else {
                 c[0][i] = -1.0;
             }

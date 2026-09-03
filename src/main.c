@@ -7,7 +7,7 @@
 // Forward declaration of the new solver
 void solver_dipolar(int closureID, double temp, double rho, double dipole_moment, 
                     int nodes, double rmax, const char *output_dir,
-                    double temp_start, int ramp_steps);
+                    double temp_start, int ramp_steps, const char *init_sk_file);
 void solver_mode2_core(int closureID, double temp, double rho, double dipole_moment, 
                    int nodes, double rmax, const char *output_dir);
 
@@ -62,6 +62,7 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "  --temp-start <double>      Temperatura inicial de rampa (continuation method).\n");
     fprintf(stderr, "  --temp-steps <int>         Número de pasos en la rampa de temperatura (defecto 10).\n");
     fprintf(stderr, "  --ramp                     Activa rampa geométrica automática de temperatura.\n");
+    fprintf(stderr, "  --init-sk   <string>       Archivo .dat con factores de estructura analíticos (k, S000, S110, S112).\n");
     fprintf(stderr, "\nEjemplo:\n");
     fprintf(stderr, "  %s --closure HNC --potential 7 --volfactor 0.2 --temp 1.0 --nodes 2048 --knodes 1024\n\n", prog_name);
 }
@@ -289,6 +290,7 @@ int main(int argc, char *argv[]) {
     double temp_start = -1.0; // Default: no temperature ramping
     int temp_steps = 10;      // Number of continuation stages
     int use_ramp = 0;         // Flag for automatic temperature ramping
+    const char *init_sk_file = NULL; // Analytical structure factor input file
     
     // Parseo de argumentos de línea de comandos
     for (int i = 1; i < argc; i++) {
@@ -316,6 +318,8 @@ int main(int argc, char *argv[]) {
             temp_steps = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--ramp") == 0) {
             use_ramp = 1;
+        } else if (strcmp(argv[i], "--init-sk") == 0 && i + 1 < argc) {
+            init_sk_file = argv[++i];
         } else if (strcmp(argv[i], "--nodes") == 0 && i + 1 < argc) {
             nodesFacdes2Y = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--knodes") == 0 && i + 1 < argc) {
@@ -372,8 +376,8 @@ int main(int argc, char *argv[]) {
         // For hard spheres, eta = (pi/6) * rho * sigma^3. With sigma=1, rho = 6 * eta / pi.
         double rho = 6.0 * volumeFactor / M_PI;
 
-        // Call the new solver with temperature continuation support
-        solver_dipolar(closure_id_int, Temperature, rho, dipole_moment, nodesFacdes2Y, rmax_val, "output", temp_start, temp_steps);
+        // Call the new solver with temperature continuation support and optional analytical S(k) init
+        solver_dipolar(closure_id_int, Temperature, rho, dipole_moment, nodesFacdes2Y, rmax_val, "output", temp_start, temp_steps, init_sk_file);
         return EXIT_SUCCESS;
     }
 

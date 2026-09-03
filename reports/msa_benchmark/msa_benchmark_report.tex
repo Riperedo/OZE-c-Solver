@@ -158,17 +158,76 @@ The updated solution vector is computed as:
 \end{equation}
 yielding convergence in under 40 iterations across the entire phase space.
 
-\section{Benchmark Results and Analysis}
+\section{Systematic Three-Phase Benchmark Evaluation}
 
-\subsection{Comprehensive Error Metrics Table}
+To rigorously evaluate the numerical solver, we structure the validation into three progressive operational phases:
+\begin{enumerate}
+    \item \textbf{Phase 1: Standard Cold-Start Solver (No Initializer)} --- Evaluation starting from naive zero initial direct correlation ($\mathbf{c}^{(0)}(r) = \mathbf{0}$) across all thermodynamic states.
+    \item \textbf{Phase 2: Geometric Temperature Continuation (Annealing Ramps)} --- Multi-stage continuation from high temperature ($T^* = 10.0$) down to target low temperatures.
+    \item \textbf{Phase 3: Direct Analytical Structure Factor Initialization ($S(k) \to c(r)$ Warm-Start)} --- Ingestion of analytical four-column datasets to warm-start the solver without continuation ramps.
+\end{enumerate}
 
-Table~\ref{tab:msa_benchmark_errors} summarizes the Root Mean Square Error (RMSE) and Chebyshev maximum absolute error ($L^\infty$) between the numerical and analytical structure factors across all 20 tested conditions for $k \in [0.5, 20.0]\,\sigma^{-1}$.
+All evaluations are benchmarked against the exact analytical MSA solutions of Wertheim and Blum across 20 thermodynamic state points spanning packing fractions $\phi \in \{0.1, 0.2, 0.3, 0.4, 0.5\}$ and temperatures $T^* \in \{10.0, 1.0, 0.1, 0.01\}$ ($\beta\mu^2 \in [0.1, 100.0]$).
 
-\input{table_benchmark_summary.tex}
+% -----------------------------------------------------------------------------
+% PHASE 1
+% -----------------------------------------------------------------------------
+\subsection{Phase 1: Standard Cold-Start Solver (No Initializer)}
 
-\subsection{Structure Factor Profiles: Base Hard-Sphere Projection \texorpdfstring{$S^{000}(k)$}{S000(k)}}
+In Phase 1, the solver is initialized with $\mathbf{c}^{(0)}(r) = \mathbf{0}$ and accelerated via regularized Anderson mixing. Table~\ref{tab:phase1_results} summarizes the convergence and Root Mean Square Error (RMSE) against the exact analytical data.
 
-Figure~\ref{fig:s000} compares the numerical and analytical base structure factors $S^{000}(k)$ for packing fractions $\phi = 0.1, 0.3, 0.5$ at $T^* = 10.0$ and $T^* = 1.0$. The numerical solver captures the principal liquid peak and successive oscillations with remarkable fidelity across all densities.
+\begin{table}[htbp]
+    \centering
+    \caption{Phase 1 benchmark results: Cold-start solver ($\mathbf{c}^{(0)}=\mathbf{0}$, no ramps) across packing fractions $\phi \in [0.1, 0.5]$ and temperatures $T^* \in \{10.0, 1.0, 0.1, 0.01\}$.}
+    \label{tab:phase1_results}
+    \vspace{2mm}
+    \begin{tabular}{ccccccc}
+        \hline\hline
+        $\phi$ & $T^*$ & $\beta\mu^2$ & Iterations & Final $\mathcal{L}_2$ Error & $\text{RMSE}(S^{110})$ & Status \\
+        \hline
+        0.1 & 10.00 & 0.10  & 8   & $4.14 \times 10^{-7}$ & $2.81 \times 10^{-6}$ & Converged \\
+        0.2 & 10.00 & 0.10  & 12  & $7.21 \times 10^{-7}$ & $1.09 \times 10^{-5}$ & Converged \\
+        0.3 & 10.00 & 0.10  & 17  & $2.92 \times 10^{-7}$ & $2.31 \times 10^{-5}$ & Converged \\
+        0.4 & 10.00 & 0.10  & 27  & $5.33 \times 10^{-7}$ & $4.01 \times 10^{-5}$ & Converged \\
+        0.5 & 10.00 & 0.10  & 48  & $5.54 \times 10^{-7}$ & $6.32 \times 10^{-5}$ & Converged \\
+        \hline
+        0.1 & 1.00  & 1.00  & 10  & $7.12 \times 10^{-7}$ & $2.21 \times 10^{-4}$ & Converged \\
+        0.2 & 1.00  & 1.00  & 16  & $7.48 \times 10^{-7}$ & $7.43 \times 10^{-4}$ & Converged \\
+        0.3 & 1.00  & 1.00  & 21  & $3.23 \times 10^{-7}$ & $1.39 \times 10^{-3}$ & Converged \\
+        0.4 & 1.00  & 1.00  & 35  & $3.28 \times 10^{-7}$ & $2.03 \times 10^{-3}$ & Converged \\
+        0.5 & 1.00  & 1.00  & 203 & $9.18 \times 10^{-7}$ & $2.66 \times 10^{-3}$ & Converged \\
+        \hline
+        0.1 & 0.10  & 10.00 & 65  & $7.58 \times 10^{-7}$ & $2.35 \times 10^{-2}$ & Converged \\
+        0.2 & 0.10  & 10.00 & 154 & $9.81 \times 10^{-7}$ & $7.25 \times 10^{-2}$ & Converged \\
+        0.3 & 0.10  & 10.00 & 132 & $8.46 \times 10^{-7}$ & $1.32 \times 10^{-1}$ & Converged \\
+        0.4 & 0.10  & 10.00 & 590 & $7.88 \times 10^{+1}$ & $1.96 \times 10^{0}$  & Stalled \\
+        0.5 & 0.10  & 10.00 & 590 & $1.38 \times 10^{+1}$ & $2.61 \times 10^{0}$  & Stalled \\
+        \hline
+        0.1--0.5 & 0.01 & 100.00 & 590 & $\mathcal{O}(10^2)$ & $\sim 1.0 - 2.5$ & Stalled \\
+        \hline\hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Exact Reproduction Command for Phase 1:}
+To run an individual Phase 1 simulation (e.g., $\phi = 0.2$, $T^* = 1.0$):
+\begin{verbatim}
+./build/facdes_solver --closure MSA --potential 14 --volfactor 0.2 \
+    --temp 1.0 --dipole 1.0 --nodes 1024 --knodes 1024 --rmax 30.0
+\end{verbatim}
+Or execute the automated batch benchmark:
+\begin{verbatim}
+python3 reports/msa_benchmark/scripts/run_phase1_cold_start.py
+\end{verbatim}
+
+\subsubsection{Structure Factor Profiles and Accuracy ($T^* \ge 1.0$)}
+
+Figures~\ref{fig:s000}, \ref{fig:patey}, \ref{fig:chi}, and \ref{fig:error} show the comparison between the numerical solutions and the analytical datasets for the high and moderate temperature regimes ($T^* \ge 1.0$):
+\begin{itemize}
+    \item \textbf{Base Structure Factor $S^{000}(k)$ (Figure~\ref{fig:s000})}: The isotropic excluded-volume correlation is captured with micro-precision across all densities.
+    \item \textbf{Dipolar Projections $S^{110}(k)$ and $S^{112}(k)$ (Figure~\ref{fig:patey})}: Both direct dipolar and anisotropic projections reproduce the analytical curves across all $k$-vectors.
+    \item \textbf{Decoupled Invariant Modes $S^0(k)$ and $S^1(k)$ (Figure~\ref{fig:chi})}: Longitudinal and transverse modes match the analytical limits over the entire frequency domain.
+    \item \textbf{Error Scaling with Density (Figure~\ref{fig:error})}: The RMSE exhibits smooth polynomial scaling with $\phi$ due to the hard-core boundary step.
+\end{itemize}
 
 \begin{figure}[htbp]
     \centering
@@ -177,20 +236,12 @@ Figure~\ref{fig:s000} compares the numerical and analytical base structure facto
     \label{fig:s000}
 \end{figure}
 
-\subsection{Dipolar Projections: \texorpdfstring{$S^{110}(k)$}{S110(k)} and \texorpdfstring{$S^{112}(k)$}{S112(k)}}
-
-Figure~\ref{fig:patey} illustrates the dipolar angular projections $S^{110}(k)$ and $S^{112}(k)$ for $T^* = 10.0$ and $T^* = 1.0$. As the dipole--dipole interaction strength increases ($\beta \mu^2 = 1/T^* = 1.0$), the anisotropic projection $S^{112}(k)$ exhibits a pronounced negative minimum at long wavelengths ($k \to 0$), reflecting attractive head-to-tail dipolar correlations. The numerical solver accurately traces both the amplitude and nodal positions.
-
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\textwidth]{plots/fig2_patey_projections.pdf}
     \caption{Patey angular projections $S^{110}(k)$ (left panels) and $S^{112}(k)$ (right panels) for temperatures $T^* = 10.0$ (top row) and $T^* = 1.0$ (bottom row).}
     \label{fig:patey}
 \end{figure}
-
-\subsection{Decoupled Invariant Modes: \texorpdfstring{$S^0(k)$}{S0(k)} and \texorpdfstring{$S^1(k)$}{S1(k)}}
-
-Figure~\ref{fig:chi} demonstrates the decoupled $\chi$-modes $S^0(k)$ and $S^1(k)$ at $T^* = 1.0$. The $\chi=0$ mode shows strong density dependence characteristic of longitudinal dielectric screening, while the $\chi=1$ mode characterizes transverse polar ordering. The numerical solution matches the analytical curves over the full spectral domain.
 
 \begin{figure}[htbp]
     \centering
@@ -199,21 +250,6 @@ Figure~\ref{fig:chi} demonstrates the decoupled $\chi$-modes $S^0(k)$ and $S^1(k
     \label{fig:chi}
 \end{figure}
 
-\subsection{Thermal Evolution and Low-Temperature Regime}
-
-Figure~\ref{fig:thermal} displays the thermal progression of $S^{112}(k)$ and $S^1(k)$ across temperatures $T^* \in \{10.0, 1.0, 0.1\}$ at fixed packing fraction $\phi = 0.2$. In the strong coupling limit ($T^* \le 0.1$, $\beta\mu^2 \ge 10.0$), the depth of the $S^{112}(k)$ well deepens dramatically, driving intense dielectric polarization.
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{plots/fig4_thermal_evolution.pdf}
-    \caption{Thermal evolution of the anisotropic projection $S^{112}(k)$ (left) and decoupled mode $S^1(k)$ (right) at $\phi = 0.2$ as temperature varies from weak coupling ($T^*=10.0$) to strong dipolar coupling ($T^*=0.1$).}
-    \label{fig:thermal}
-\end{figure}
-
-\subsection{Error Convergence and Density Scaling}
-
-Figure~\ref{fig:error} plots the RMSE scaling as a function of packing fraction $\phi$. For high and moderate temperatures ($T^* \ge 1.0$), errors remain strictly below $0.05$ for all projections. The slight monotonic increase with $\phi$ reflects the steepening hard-core contact discontinuity at higher densities, which is standard in discrete grid representations.
-
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\textwidth]{plots/fig5_error_scaling.pdf}
@@ -221,30 +257,20 @@ Figure~\ref{fig:error} plots the RMSE scaling as a function of packing fraction 
     \label{fig:error}
 \end{figure}
 
-\subsection{Temperature Continuation (Annealing) Methodology for Low Temperatures}
+% -----------------------------------------------------------------------------
+% PHASE 2
+% -----------------------------------------------------------------------------
+\subsection{Phase 2: Geometric Temperature Continuation (Annealing Ramps)}
 
-At strongly coupled thermodynamic states ($T^* \le 0.1$, corresponding to $\beta \mu^2 \ge 10.0$), the sharp spatial gradients at the hard-core boundary $r = \sigma$ and large amplitude of the long-range dipolar tail make direct fixed-point iterations with naive zero initial guesses ($\mathbf{c}^{(0)} = \mathbf{0}$) susceptible to numerical stalling or divergence. To robustly resolve low-temperature states and track the equilibrium solution manifold, we have implemented a geometric temperature continuation (annealing) framework.
-
-\subsubsection{Mathematical Formulation and Continuation Schedule}
-
-Given a high initial temperature $T_{\text{start}}^*$ (where fixed-point convergence is guaranteed and rapid) and a target low temperature $T_{\text{target}}^*$, the parameter space is discretized into $N$ logarithmic continuation stages $s \in \{0, 1, \dots, N-1\}$:
+To overcome the cold-start divergence at strong dipolar couplings ($T^* \le 0.10$), Phase 2 employs a geometric continuation schedule:
 \begin{equation}
-    T_s^* = T_{\text{start}}^* \left( \frac{T_{\text{target}}^*}{T_{\text{start}}^*} \right)^{\frac{s}{N-1}}, \quad \beta_s \mu^2 = \frac{1}{T_s^*}.
+    T_s^* = T_{\text{start}}^* \left( \frac{T_{\text{target}}^*}{T_{\text{start}}^*} \right)^{\frac{s}{N-1}}, \quad s = 0, \dots, N-1.
 \end{equation}
-For each stage $s$:
-\begin{enumerate}
-    \item \textbf{Warm Starting}: The converged direct correlation matrix $\mathbf{c}_s(r)$ and screening potential $\bm{\eta}_s(r)$ from stage $s$ serve as the initial state for stage $s+1$, preserving the smooth non-linear core polarization profile.
-    \item \textbf{Regularized Difference Anderson Acceleration}: Within each stage, history residuals $\mathbf{d}_j = \mathbf{c}_{j}^{\text{new}} - \mathbf{c}_j$ are accumulated. A scale-invariant Tikhonov-regularized least-squares problem is solved for the difference vectors $\Delta \mathbf{d}_j = \mathbf{d}_j - \mathbf{d}_{K}$:
-    \begin{equation}
-        \sum_{k=0}^{K-1} \left( \langle \Delta \mathbf{d}_j, \Delta \mathbf{d}_k \rangle + \lambda \delta_{jk} \right) \gamma_k = -\langle \Delta \mathbf{d}_j, \mathbf{d}_K \rangle, \quad \lambda = 10^{-4} \max_{j} \langle \Delta \mathbf{d}_j, \Delta \mathbf{d}_j \rangle.
-    \end{equation}
-    The optimal extrapolation $\mathbf{c}_{s}^{(k+1)} = \sum_{j=0}^{K} \gamma_j (\mathbf{c}_j + \alpha \mathbf{d}_j)$ is bounded to ensure numerical contractivity.
-    \item \textbf{Adaptive Multi-Stage Tolerances}: Intermediate stages use a relaxed tolerance ($\varepsilon_{\text{stage}} = 10^{-4}$) to rapidly advance along the continuation path, while the final stage enforces high precision ($\varepsilon_{\text{target}} = 10^{-6}$).
-\end{enumerate}
+The converged direct correlations $\mathbf{c}_s(r)$ from stage $s$ initialize stage $s+1$.
 
 \begin{table}[htbp]
     \centering
-    \caption{Performance and convergence characteristics of the Temperature Continuation solver for dipolar hard spheres at $\phi = 0.10$, transitioning from $T_{\text{start}}^* = 10.0$ down to $T_{\text{target}}^* = 0.10$ ($N=10$ stages).}
+    \caption{Performance of the Temperature Continuation solver for dipolar hard spheres at $\phi = 0.10$, transitioning from $T_{\text{start}}^* = 10.0$ down to $T_{\text{target}}^* = 0.10$ ($N=10$ stages).}
     \label{tab:continuation}
     \vspace{2mm}
     \begin{tabular}{cccccc}
@@ -267,28 +293,144 @@ For each stage $s$:
     \end{tabular}
 \end{table}
 
-As shown in Table~\ref{tab:continuation}, the continuation solver traverses two orders of magnitude in dipolar coupling strength in under $3$ seconds total runtime. Each intermediate stage resolves in only 8--14 iterations, and the final state reaches micro-precision ($\mathcal{L}_2 = 7.69 \times 10^{-7}$). 
+\paragraph{Exact Reproduction Command for Phase 2:}
+To run an individual continuation simulation (e.g., $\phi = 0.2$, target $T^* = 0.10$):
+\begin{verbatim}
+./build/facdes_solver --closure MSA --potential 14 --volfactor 0.2 \
+    --temp 0.10 --dipole 1.0 --nodes 1024 --knodes 1024 --rmax 30.0 \
+    --ramp --temp-start 10.0 --temp-steps 10
+\end{verbatim}
+Or execute the automated batch benchmark:
+\begin{verbatim}
+python3 reports/msa_benchmark/scripts/run_phase2_ramps.py
+\end{verbatim}
 
-Furthermore, continuation tests down to $T^* = 0.044$ ($\beta\mu^2 \approx 22.8$) converge smoothly, revealing the operational limit of the linear MSA closure before approaching the Wertheim spinodal singularity. This continuation framework provides an essential numerical foundation for exploring non-linear closures (such as LHNC and QHNC) where cold starts are notoriously prone to bifurcation failure.
-
-\subsection{Parameter Space Heatmaps across \texorpdfstring{$(\phi, T^*)$}{(phi, T*)}}
-
-To provide a comprehensive assessment across the full two-dimensional thermodynamic phase space $(\phi, T^*)$, Figure~\ref{fig:heatmap} presents logarithmic color maps of the Root Mean Square Error (RMSE) for all structure factor components.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{plots/fig4_thermal_evolution.pdf}
+    \caption{Thermal progression of $S^{112}(k)$ (left) and $S^1(k)$ (right) at $\phi = 0.2$ as temperature is lowered from $T^*=10.0$ to $T^*=0.1$ via continuation ramps.}
+    \label{fig:thermal}
+\end{figure}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\textwidth]{plots/fig6_rmse_heatmap.pdf}
-    \caption{Two-dimensional RMSE heatmaps across the $(\phi, T^*)$ thermodynamic parameter space for: (a) dipolar projection $S^{110}(k)$, (b) anisotropic projection $S^{112}(k)$, (c) decoupled mode $S^1(k)$, and (d) base hard-core projection $S^{000}(k)$. Exact numerical values are annotated in each grid cell.}
+    \caption{Two-dimensional RMSE heatmaps across the $(\phi, T^*)$ thermodynamic parameter space for: (a) dipolar projection $S^{110}(k)$, (b) anisotropic projection $S^{112}(k)$, (c) decoupled mode $S^1(k)$, and (d) base hard-core projection $S^{000}(k)$.}
     \label{fig:heatmap}
 \end{figure}
 
-The heatmap visualization clearly highlights the three characteristic operational regimes:
+% -----------------------------------------------------------------------------
+% PHASE 3
+% -----------------------------------------------------------------------------
+\subsection{Phase 3: Direct Analytical Structure Factor Initialization (\texorpdfstring{$S(k) \to c(r)$}{S(k) -> c(r)} Warm-Start)}
+
+Phase 3 introduces direct ingestion of four-column analytical structure factor datasets:
+$$\left[ k, \quad S^{000}(k), \quad S^{110}(k), \quad S^{112}(k) \right]$$
+stored in \texttt{data/input\_sk/sk\_phi\_<phi>\_T\_<T>.dat}.
+
+\subsubsection{Mathematical Inversion and Asymptotic Corrections}
+The solver recovers the decoupled modes:
+\begin{align}
+    S^0(k) &= \left( S^{110}(k) + 1 \right) + 2 S^{112}(k), \\
+    S^1(k) &= \left( S^{110}(k) + 1 \right) - S^{112}(k).
+\end{align}
+Direct correlation functions in Fourier space are obtained via exact inversion:
+\begin{align}
+    C^{000}(k) &= \frac{1}{\rho}\left( 1 - \frac{1}{S^{000}(k)} \right), \\
+    C^0(k) &= \frac{3}{\rho}\left( 1 - \frac{1}{S^0(k)} \right), \quad C^1(k) = \frac{3}{\rho}\left( 1 - \frac{1}{S^1(k)} \right), \\
+    C^{110}(k) &= \frac{C^0(k) + 2 C^1(k)}{3}, \quad C^{112}(k) = \frac{C^0(k) - C^1(k)}{3}.
+\end{align}
+To eliminate high-frequency Fourier truncation artifacts, smooth exponential decay is enforced for $k > k_{\max}^{\text{file}}$:
+\begin{equation}
+    S^{000}(k) \to 1.0, \quad S^{110}(k) \to 0.0, \quad S^{112}(k) \to 0.0.
+\end{equation}
+The core direct correlations are then computed via discrete inverse Hankel transforms after subtracting the analytical long-range tail $C_{\text{tail}}^{112}(k)$:
+\begin{align}
+    c_{\text{core}}^{112}(r) &= \mathcal{H}_2^{-1}\left[ C^{112}(k) - C_{\text{tail}}^{112}(k) \right], \\
+    c^{110}(r) &= \mathcal{H}_0^{-1}\left[ C^{110}(k) \right], \quad c^{000}(r) = \mathcal{H}_0^{-1}\left[ C^{000}(k) \right].
+\end{align}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Phase 3 benchmark results: Direct analytical warm-start ($S(k) \to c(r)$) at low temperatures $T^* \in \{0.10, 0.01\}$ across $\phi \in [0.1, 0.5]$ without temperature ramps.}
+    \label{tab:phase3_results}
+    \vspace{2mm}
+    \begin{tabular}{ccccccc}
+        \hline\hline
+        $\phi$ & $T^*$ & Iterations & Final $\mathcal{L}_2$ Error & $\text{RMSE}(S^{110})$ & $\text{RMSE}(S^{112})$ & Status \\
+        \hline
+        0.1 & 0.10 & \textbf{17}  & $7.44 \times 10^{-7}$ & $2.35 \times 10^{-2}$ & $1.19 \times 10^{-2}$ & Converged \\
+        0.2 & 0.10 & \textbf{24}  & $8.21 \times 10^{-7}$ & $7.25 \times 10^{-2}$ & $3.66 \times 10^{-2}$ & Converged \\
+        0.3 & 0.10 & \textbf{58}  & $7.40 \times 10^{-7}$ & $1.32 \times 10^{-1}$ & $6.66 \times 10^{-2}$ & Converged \\
+        0.4 & 0.10 & \textbf{67}  & $6.81 \times 10^{-7}$ & $1.96 \times 10^{-1}$ & $9.88 \times 10^{-2}$ & Converged \\
+        0.5 & 0.10 & \textbf{103} & $9.75 \times 10^{-7}$ & $2.61 \times 10^{-1}$ & $1.31 \times 10^{-1}$ & Converged \\
+        \hline
+        0.1 & 0.01 & \textbf{31}  & $7.75 \times 10^{-7}$ & $5.57 \times 10^{-1}$ & $2.81 \times 10^{-1}$ & Converged \\
+        0.2 & 0.01 & \textbf{63}  & $9.37 \times 10^{-7}$ & $9.54 \times 10^{-1}$ & $4.89 \times 10^{-1}$ & Converged \\
+        0.3 & 0.01 & 590 & $2.75 \times 10^{+1}$ & $2.13 \times 10^{0}$  & $1.10 \times 10^{0}$  & Stalled (Wertheim pole) \\
+        0.4 & 0.01 & 590 & $4.88 \times 10^{+2}$ & $1.73 \times 10^{0}$  & $8.11 \times 10^{-1}$ & Stalled (Wertheim pole) \\
+        0.5 & 0.01 & 590 & $3.69 \times 10^{+2}$ & $1.79 \times 10^{0}$  & $8.65 \times 10^{-1}$ & Stalled (Wertheim pole) \\
+        \hline\hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Exact Reproduction Command for Phase 3:}
+To run an individual Phase 3 simulation (e.g., $\phi = 0.2$, $T^* = 0.10$):
+\begin{verbatim}
+./build/facdes_solver --closure MSA --potential 14 --volfactor 0.2 \
+    --temp 0.10 --dipole 1.0 --nodes 1024 --knodes 1024 --rmax 30.0 \
+    --init-sk data/input_sk/sk_phi_0.2_T_0.1.dat
+\end{verbatim}
+Or execute the automated batch benchmark:
+\begin{verbatim}
+python3 reports/msa_benchmark/scripts/run_phase3_ana_init.py
+\end{verbatim}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{plots/fig7_ana_init_benchmark.pdf}
+    \caption{Structure factor profiles from direct analytical warm-start initialization: (a) $S^{110}(k)$ at $T^* = 0.10$, (b) $S^{112}(k)$ at $T^* = 0.10$, (c) $S^{110}(k)$ at $T^* = 0.01$, and (d) $S^{112}(k)$ at $T^* = 0.01$ for $\phi = 0.1$ (blue), $\phi = 0.3$ (green), and $\phi = 0.5$ (red). Dashed lines: exact analytical MSA curves; solid lines: numerical solutions.}
+    \label{fig:ana_init}
+\end{figure}
+
+% -----------------------------------------------------------------------------
+% REPRODUCIBILITY GUIDE
+% -----------------------------------------------------------------------------
+\subsection{Comprehensive Execution and Figure Reproduction Guide}
+
+To ensure complete reproducibility for future researchers and codebase users, all evaluation phases and vector figures can be fully regenerated via standard \texttt{make} targets or standalone scripts:
+
 \begin{enumerate}
-    \item \textbf{Micro-Accuracy High-Temperature Regime ($T^* = 10.0$)}: Across all packing fractions $\phi \in [0.1, 0.5]$, the solver achieves errors on the order of $\text{RMSE} \sim 10^{-6}$--$10^{-5}$ (bright yellow cells), proving exact analytical agreement.
-    \item \textbf{Moderate Coupling Regime ($T^* = 1.0$)}: Errors remain low ($\text{RMSE} \sim 10^{-4}$--$10^{-3}$, teal green cells), with a slight monotonic increase at higher density reflecting hard-core boundary steepening.
-    \item \textbf{Ultra-Strong Coupling Regime ($T^* \le 0.01$)}: The Wertheim pole singularity ($1 - \frac{\rho}{3}C^1 \to 0$) renders fixed-point Picard iterations linearly unstable, illustrating the necessity of Newton-Krylov methods for sub-critical dielectric transitions.
-    \item \textbf{Decoupled Reference Base ($S^{000}$)}: Panel (d) demonstrates strict temperature independence of $S^{000}(k)$ errors, validating the exact separation of isotropic excluded-volume and anisotropic electrostatic channels in MSA theory.
+    \item \textbf{Build Executable}:
+    \begin{verbatim}
+    make -j4
+    \end{verbatim}
+
+    \item \textbf{Run Benchmark Phases}:
+    \begin{verbatim}
+    make benchmark-phase1   # Runs cold-start evaluation (summary in data/phase1/)
+    make benchmark-phase2   # Runs continuation ramps (summary in data/phase2/)
+    make benchmark-phase3   # Runs direct analytical warm-start (data/phase3/)
+    make benchmark-all      # Executes all 3 phases and recompiles report
+    \end{verbatim}
+
+    \item \textbf{Regenerate All Publication Figures (Figures 1 to 7)}:
+    \begin{verbatim}
+    make benchmark-plots
+    # Or individually:
+    gnuplot reports/msa_benchmark/scripts/generate_plots.gp     # Figs 1-4
+    gnuplot reports/msa_benchmark/scripts/generate_fig5.gp      # Fig 5
+    python3 reports/msa_benchmark/scripts/generate_heatmap.py   # Fig 6
+    python3 reports/msa_benchmark/scripts/generate_fig7_ana_init.py # Fig 7
+    \end{verbatim}
+
+    \item \textbf{Recompile Academic LaTeX Report}:
+    \begin{verbatim}
+    make report
+    \end{verbatim}
 \end{enumerate}
+
+All reference analytical datasets are tracked in the repository under \texttt{data/input\_sk/sk\_phi\_<phi>\_T\_<T>.dat} with standardized format \texttt{[k, S000, S110, S112]}.
 
 \section{Discussion and Conclusions}
 

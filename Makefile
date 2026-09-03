@@ -75,16 +75,48 @@ help:
 	@echo "Ejemplo de ejecución manual:"
 	@echo "  $(TARGET) --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 2048 --knodes 512"
 
-# Instalar (copiar ejecutable a /usr/local/bin)
-install: $(TARGET)
-	@echo "Instalando facdes_solver..."
-	sudo cp $(TARGET) /usr/local/bin/
-	@echo "$(GREEN)✓ Instalado en /usr/local/bin/facdes_solver$(NC)"
+# Benchmark and Report Targets
+benchmark-phase1: $(TARGET)
+	@echo "Running Phase 1: Standard Cold-Start Benchmark..."
+	python3 reports/msa_benchmark/scripts/run_phase1_cold_start.py
 
-# Desinstalar
-uninstall:
-	@echo "Desinstalando facdes_solver..."
-	sudo rm -f /usr/local/bin/facdes_solver
-	@echo "$(GREEN)✓ Desinstalado!$(NC)"
+benchmark-phase2: $(TARGET)
+	@echo "Running Phase 2: Temperature Continuation Ramps..."
+	python3 reports/msa_benchmark/scripts/run_phase2_ramps.py
 
-.PHONY: all clean cleanall dirs test help install uninstall
+benchmark-phase3: $(TARGET)
+	@echo "Running Phase 3: Direct Analytical S(k) Warm-Start..."
+	python3 reports/msa_benchmark/scripts/run_phase3_ana_init.py
+
+benchmark-plots:
+	@echo "Generating Publication Figures (Figures 1 to 7)..."
+	gnuplot reports/msa_benchmark/scripts/generate_plots.gp
+	gnuplot reports/msa_benchmark/scripts/generate_fig5.gp
+	python3 reports/msa_benchmark/scripts/generate_heatmap.py
+	python3 reports/msa_benchmark/scripts/generate_fig7_ana_init.py
+
+report:
+	@echo "Compiling LaTeX Academic Report (MSA Benchmark)..."
+	@cd reports/msa_benchmark && pdflatex -interaction=nonstopmode msa_benchmark_report.tex > /dev/null && pdflatex -interaction=nonstopmode msa_benchmark_report.tex > /dev/null
+	@echo "$(GREEN)✓ Report compiled: reports/msa_benchmark/msa_benchmark_report.pdf$(NC)"
+
+benchmark-all:
+	@bash reports/msa_benchmark/scripts/run_all_phases.sh
+
+# Monte Carlo Simulation Benchmark Targets (Fries & Patey JCP 1985)
+benchmark-mc: $(TARGET)
+	@echo "Running Monte Carlo Benchmark Suite (MSA, LHNC, QHNC)..."
+	python3 reports/monte_carlo_benchmark/scripts/run_mc_benchmarks.py
+
+plots-mc:
+	@echo "Generating Monte Carlo Publication Figures (Figures 1 to 6)..."
+	python3 reports/monte_carlo_benchmark/scripts/generate_mc_plots.py
+
+report-mc: plots-mc
+	@echo "Compiling Monte Carlo Academic Report..."
+	@cd reports/monte_carlo_benchmark && pdflatex -interaction=nonstopmode monte_carlo_benchmark_report.tex > /dev/null && pdflatex -interaction=nonstopmode monte_carlo_benchmark_report.tex > /dev/null
+	@echo "$(GREEN)✓ Monte Carlo Report compiled: reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf$(NC)"
+
+mc-all: benchmark-mc plots-mc report-mc
+
+.PHONY: all clean cleanall dirs test help install uninstall benchmark-phase1 benchmark-phase2 benchmark-phase3 benchmark-plots report benchmark-all benchmark-mc plots-mc report-mc mc-all
