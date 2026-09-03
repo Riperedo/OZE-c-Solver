@@ -65,6 +65,24 @@ static int solve_small_system(int n, double A[6][6], double b[6], double x[6]) {
 }
 
 /**
+ * @brief Computes the exact analytical Fourier/Hankel transform of the dipolar tail 1/r^3.
+ *
+ * Outside the hard core (r > sigma), c^{112}(r) = beta*mu^2 / r^3.
+ * The exact integral \int_sigma^\infty (1/r) * j_2(k*r) dr evaluates analytically to j_1(k*sigma)/(k*sigma).
+ * Therefore, C_{tail}^{112}(k) = -4*pi*beta*mu^2 * j_1(k*sigma) / (k*sigma).
+ */
+static inline double analytical_dipolar_tail_k(double k_val, double beta_mu2, double sigma) {
+    double x = k_val * sigma;
+    double j1_over_x;
+    if (x < 1e-4) {
+        j1_over_x = 1.0 / 3.0 - (x * x) / 30.0 + (x * x * x * x) / 840.0;
+    } else {
+        j1_over_x = (sin(x) - x * cos(x)) / (x * x * x);
+    }
+    return -4.0 * M_PI * beta_mu2 * j1_over_x;
+}
+
+/**
  * @brief Solves the OZ equation in k-space for Dipolar Hard Spheres.
  *
  * Uses the chi-basis decoupling (Blum/Wertheim) which reduces the coupled
@@ -279,11 +297,11 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
         int iter = 0;
         double error = 1.0;
         double stage_tol = (stage < num_stages - 1) ? 1e-4 : tolerance;
-        int max_iter_stage = 1000;
+        int max_iter_stage = (stage < num_stages - 1) ? 50 : 500;
 
         while (iter < max_iter_stage && error > stage_tol) {
             
-            // A. Forward Hankel Transforms c(r) -> C(k)
+            // A. Forward Hankel Transforms c(r) -> C(k) with Dipolar Tail Splitting
             for (int i = 0; i < nodes; i++) {
                 double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
                 const double *row0 = &K0_fwd[i * nodes];
@@ -291,35 +309,44 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
                 for (int j = 0; j < nodes; j++) {
                     sum0 += row0[j] * c->data[0][j];
                     sum1 += row0[j] * c->data[1][j];
-                    sum2 += row2[j] * c->data[2][j];
+                    // Core direct correlation function (strictly zero outside sigma in MSA)
+                    double c_core_2 = (r[j] < sigma) ? c->data[2][j] : (c->data[2][j] - beta_mu2 / pow(r[j], 3.0));
+                    sum2 += row2[j] * c_core_2;
                 }
                 C_k->data[0][i] = sum0;
                 C_k->data[1][i] = sum1;
-                C_k->data[2][i] = sum2;
+                // Add exact analytical Hankel transform of long-range 1/r^3 tail
+                C_k->data[2][i] = sum2 + analytical_dipolar_tail_k(k[i], beta_mu2, sigma);
             }
 
             // B. Solve OZ in k-space
             solve_oz_k_space(C_k->data, H_k->data, nodes, rho);
 
-            // C. Inverse Hankel Transforms H(k) -> h(r)
+            // C. Inverse Hankel Transforms N(k) = H(k) - C(k) -> eta(r)
             for (int i = 0; i < nodes; i++) {
                 double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
                 const double *row0 = &K0_inv[i * nodes];
                 const double *row2 = &K2_inv[i * nodes];
                 for (int j = 0; j < nodes; j++) {
-                    sum0 += row0[j] * H_k->data[0][j];
-                    sum1 += row0[j] * H_k->data[1][j];
-                    sum2 += row2[j] * H_k->data[2][j];
+                    double N0 = H_k->data[0][j] - C_k->data[0][j];
+                    double N1 = H_k->data[1][j] - C_k->data[1][j];
+                    double N2 = H_k->data[2][j] - C_k->data[2][j];
+                    sum0 += row0[j] * N0;
+                    sum1 += row0[j] * N1;
+                    sum2 += row2[j] * N2;
                 }
-                h->data[0][i] = sum0;
-                h->data[1][i] = sum1;
-                h->data[2][i] = sum2;
+                eta->data[0][i] = sum0;
+                eta->data[1][i] = sum1;
+                eta->data[2][i] = sum2;
+
+                h->data[0][i] = c->data[0][i] + sum0;
+                h->data[1][i] = c->data[1][i] + sum1;
+                h->data[2][i] = c->data[2][i] + sum2;
             }
 
-            // D. Calculate Eta = h - c
+            // D. Prepare target c_new buffer
             for (int p = 0; p < n_projections; p++) {
                 for (int i = 0; i < nodes; i++) {
-                    eta->data[p][i] = h->data[p][i] - c->data[p][i];
                     c_new_mat->data[p][i] = c->data[p][i];
                 }
             }
@@ -440,19 +467,36 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
                         for (int j = 0; j < K; j++) gamma_last -= gamma_vec[j];
                     }
 
-                    idx = 0;
-                    for (int p = 0; p < n_projections; p++) {
-                        for (int i = 0; i < nodes; i++) {
-                            double val = 0.0;
-                            for (int j = 0; j < K; j++) {
-                                val += gamma_vec[j] * (c_hist[j][idx] + alpha * d_hist[j][idx]);
-                            }
-                            val += gamma_last * (c_hist[K][idx] + alpha * d_hist[K][idx]);
-                            c->data[p][i] = val;
-                            idx++;
+                    int val_valid = 1;
+                    for (int pt = 0; pt < total_dim; pt++) {
+                        double val = 0.0;
+                        for (int j = 0; j < K; j++) {
+                            val += gamma_vec[j] * (c_hist[j][pt] + alpha * d_hist[j][pt]);
+                        }
+                        val += gamma_last * (c_hist[K][pt] + alpha * d_hist[K][pt]);
+                        if (isnan(val) || isinf(val) || fabs(val) > 500.0) {
+                            val_valid = 0;
+                            break;
                         }
                     }
-                    applied_anderson = 1;
+
+                    if (val_valid) {
+                        idx = 0;
+                        for (int p = 0; p < n_projections; p++) {
+                            for (int i = 0; i < nodes; i++) {
+                                double val = 0.0;
+                                for (int j = 0; j < K; j++) {
+                                    val += gamma_vec[j] * (c_hist[j][idx] + alpha * d_hist[j][idx]);
+                                }
+                                val += gamma_last * (c_hist[K][idx] + alpha * d_hist[K][idx]);
+                                c->data[p][i] = val;
+                                idx++;
+                            }
+                        }
+                        applied_anderson = 1;
+                    } else {
+                        hist_count = 0; // Discard invalid history
+                    }
                 }
             }
 
@@ -461,6 +505,17 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
                 for (int p = 0; p < n_projections; p++) {
                     for (int i = 0; i < nodes; i++) {
                         c->data[p][i] += alpha * (c_new_mat->data[p][i] - c->data[p][i]);
+                    }
+                }
+            }
+
+            // In MSA closure, strictly enforce exact asymptotic behavior outside core
+            if (closureID == 0) {
+                for (int i = 0; i < nodes; i++) {
+                    if (r[i] >= sigma) {
+                        c->data[0][i] = 0.0;
+                        c->data[1][i] = 0.0;
+                        c->data[2][i] = beta_mu2 / pow(r[i], 3.0);
                     }
                 }
             }
@@ -484,6 +539,24 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
         free(c_hist[m]);
         free(d_hist[m]);
     }
+
+    // Final exact calculation of C_k and H_k from converged c(r)
+    double final_beta_mu2 = (dipole_moment * dipole_moment) / temp;
+    for (int i = 0; i < nodes; i++) {
+        double sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
+        const double *row0 = &K0_fwd[i * nodes];
+        const double *row2 = &K2_fwd[i * nodes];
+        for (int j = 0; j < nodes; j++) {
+            sum0 += row0[j] * c->data[0][j];
+            sum1 += row0[j] * c->data[1][j];
+            double c_core_2 = (r[j] < sigma) ? c->data[2][j] : (c->data[2][j] - final_beta_mu2 / pow(r[j], 3.0));
+            sum2 += row2[j] * c_core_2;
+        }
+        C_k->data[0][i] = sum0;
+        C_k->data[1][i] = sum1;
+        C_k->data[2][i] = sum2 + analytical_dipolar_tail_k(k[i], final_beta_mu2, sigma);
+    }
+    solve_oz_k_space(C_k->data, H_k->data, nodes, rho);
 
     // 4. Output Results
     FILE *fp = fopen("output/output_dipolar.dat", "w");

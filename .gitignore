@@ -35,3 +35,9 @@ core.[0-9]*
 
 # Carpetas auxiliares
 aux/
+
+# LaTeX build artifacts
+*.aux
+*.out
+*.toc
+*.synctex.gz

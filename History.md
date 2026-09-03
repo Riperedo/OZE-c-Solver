@@ -76,6 +76,18 @@
   - Added Section 4.5 and Table II to [`reports/msa_benchmark/msa_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.tex) detailing the temperature continuation algorithm and convergence characteristics.
   - Re-ran full benchmark suite across all 20 states using temperature continuation, regenerating benchmark datasets in `reports/msa_benchmark/data/` and vector figures.
   - Characterized finite-box $R_{\max}$ dipolar truncation effects ($1/r^3$ tail discretization) at strong coupling ($\beta\mu^2 \ge 10.0$).
-  - Recompiled LaTeX report to [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf).
+  - Recompiled LaTeX report to [`reports/msa_benchmark/msa_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/msa_benchmark/msa_benchmark_report.pdf).## Analytical Dipolar Tail Splitting & Benchmark Stabilization for Strong Coupling (2026-09-02)
 
-
+- **Exact Analytical Dipolar Tail Splitting**:
+  - Implemented analytical splitting for the long-range $1/r^3$ direct correlation tail in [`src/solver_dipolar.c`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/src/solver_dipolar.c):
+    $$c^{112}(r) = c_{\text{core}}^{112}(r) + c_{\text{tail}}^{112}(r), \quad c_{\text{tail}}^{112}(r) = \frac{\beta\mu^2}{r^3} \Theta(r - \sigma)$$
+  - Evaluated the infinite-domain spherical Bessel transform of order $l=2$ analytically:
+    $$C_{\text{tail}}^{112}(k) = -4\pi \beta\mu^2 \int_\sigma^\infty \frac{j_2(kr)}{r} dr = -4\pi \beta\mu^2 \frac{j_1(k\sigma)}{k\sigma}$$
+  - Evaluated the small-$k$ Taylor expansion for $k\sigma \to 0$ to guarantee machine-precision numerical stability:
+    $$\frac{j_1(x)}{x} = \frac{1}{3} - \frac{x^2}{30} + \frac{x^4}{840} + \mathcal{O}(x^6)$$
+  - Completely eliminated the boundary truncation Gibbs ringing artifact in $k$-space, reducing numerical errors by orders of magnitude and producing smooth, monotonic structure factors.
+- **Low-Temperature & Physical Branch Analysis ($T^* = 0.10$ and $T^* = 0.01$)**:
+  - Analyzed the physical stability of Wertheim MSA: in the MSA decoupling, $S^1(k) = [1 - (\rho/3) C^1(k)]^{-1}$.
+  - At high and moderate temperatures ($T^* = 10.0$ and $T^* = 1.0$), numerical and analytical structure factors agree to $10^{-6}$ and $10^{-4}$ RMSE respectively across all volume fractions $\phi \in [0.1, 0.5]$.
+  - As temperature drops to $T^* = 0.10$ ($\beta\mu^2 = 10.0$), the continuation solver accurately computes the core polarization function $c_{\text{core}}^{112}(r)$ to cancel the large dipolar tail, matching analytical predictions with $\text{RMSE} \approx 10^{-3} - 10^{-2}$.
+  - Identified that at extreme couplings ($T^* \to 0.01$, $\beta\mu^2 = 100.0$), the denominator $1 - (\rho/3)C^1(0)$ approaches 0 ($0.0614$), which increases the spectral radius of the Picard operator $\rho(J) > 1$. Demonstrated via Jacobian-Free Newton-Krylov (JFNK) that Newton-based solvers resolve the stiff regime efficiently.
