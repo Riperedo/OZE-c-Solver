@@ -89,21 +89,44 @@ def run_solver(closure_name, phi, temp, dipole, rmax=30.0, nodes=4096, knodes=10
     iters = 0
     final_err = 1.0
     converged = False
-    for line in res.stdout.split("\n"):
-        if "Iter" in line and "Error =" in line:
-            parts = line.split()
-            try:
-                iters = int(parts[1].replace(":", ""))
-                final_err = float(parts[-1])
-            except (ValueError, IndexError):
-                pass
-        if "Written output/output_dipolar.dat" in line:
+    
+    if ramp:
+        # Sum iterations across all completed stages
+        total_ramp_iters = 0
+        for line in res.stdout.split("\n"):
+            if "completed in" in line and "iterations" in line:
+                try:
+                    parts = line.split("completed in")
+                    it_part = parts[1].split()[0]
+                    total_ramp_iters += int(it_part)
+                except (ValueError, IndexError):
+                    pass
+            if "Error =" in line:
+                try:
+                    final_err = float(line.split("=")[-1].strip().replace(")", ""))
+                except ValueError:
+                    pass
+        if "Written output/output_dipolar.dat" in res.stdout or "Solución guardada" in res.stdout:
+            if final_err < 1e-4:
+                converged = True
+                iters = total_ramp_iters if total_ramp_iters > 0 else 1
+    else:
+        for line in res.stdout.split("\n"):
+            if "Iter" in line and "Error =" in line:
+                parts = line.split()
+                try:
+                    iters = int(parts[1].replace(":", "")) + 1
+                    final_err = float(parts[-1])
+                except (ValueError, IndexError):
+                    pass
+        if ("Written output/output_dipolar.dat" in res.stdout or "Solución guardada" in res.stdout or "Convergencia" in res.stdout) and final_err < 1e-4:
             converged = True
 
-    if not converged and iters >= 200:
+    if not converged:
         return {"converged": False, "iters": "Stalled", "error": final_err, "raw": res.stdout}
 
-    return {"converged": converged, "iters": iters, "error": final_err, "raw": res.stdout}
+    return {"converged": True, "iters": iters, "error": final_err, "raw": res.stdout}
+
 
 def compute_rmse(num_r, num_val, mc_file):
     if not os.path.exists(mc_file):

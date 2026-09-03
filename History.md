@@ -237,7 +237,35 @@
     - `fig_plw_angular_grid.{pdf,png}`: 6-panel grid of $h^{110}(r)$ and $h^{112}(r)$ across densities.
     - `fig_plw_error_comparison.{pdf,png}`: Comparative logarithmic RMSE bar charts.
     - `fig_plw_1_g000_rho015` through `fig_plw_4_g000_rho08`: High-resolution individual state plots.
-  - Extended [`reports/monte_carlo_benchmark/monte_carlo_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/monte_carlo_benchmark_report.tex) with Section 5 ("Density Evolution Benchmark: Patey, Levesque \& Weis 1979"), Table 2 (`table_plw_summary.tex`), and citations, and compiled [`reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf).
+- Extended [`reports/monte_carlo_benchmark/monte_carlo_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/monte_carlo_benchmark_report.tex) with Section 5 ("Density Evolution Benchmark: Patey, Levesque \& Weis 1979"), Table 2 (`table_plw_summary.tex`), and citations, and compiled [`reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf).
   - Updated [`Makefile`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/Makefile) targets `benchmark-plw`, `plots-plw`, and `mc-all`.
+
+## Dipolar Solver Bug Fixes & PLW Benchmark Stabilization (2026-09-03)
+
+- **Root-Cause Investigation of Non-Linear Convergence Failures**:
+  - Investigated severe divergence anomalies observed in Figure 7 (reproducing Fig. 8 $h^{110}(r)$ and Fig. 11 $h^{112}(r)$ from Patey, Levesque \& Weis 1979 at $\rho^* = 0.60, \mu^{*2} = 2.75$) and QHNC at high packing densities.
+  - Identified and resolved two critical numerical defects in [`src/solver_dipolar.c`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/src/solver_dipolar.c):
+    1. **Continuation Stage Overwrite Bug (`src/solver_dipolar.c` lines 430–445)**:
+       - Between consecutive temperature continuation steps, the solver was unconditionally re-initializing the tail of $c^{112}(r)$ outside the core ($r \ge \sigma$) to the bare dipolar potential $\beta\mu^2 / r^3$.
+       - While strictly valid for linear MSA (where $c^{112}(r) = \beta\mu^2/r^3$ everywhere outside the core), this erased the non-linear direct correlation screening tail $c_{2,\text{core}}(r)$ accumulated in LHNC, QHNC, and RHNC, causing Anderson mixing divergence during continuation stages.
+       - **Fix**: Guarded the explicit tail re-assignment with `if (closureID == 0)`.
+    2. **Warm-Start $1/r^3$ Core Singularity Bug (`src/solver_dipolar.c` lines 406–425)**:
+       - In `load_analytical_sk`, the inverse Hankel transformation $K_2^{-1}[S_2(k)]$ reconstructs the full core direct correlation $c_{2,\text{core}}(r)$.
+       - For non-linear closures, the function was adding $\beta\mu^2 / r^3$ across *all* radial grid points $r \in [0, R_{\max}]$.
+       - As $r \to 0$ inside the excluded volume ($r < \sigma$), $1/r^3 \to \infty$ injected a catastrophic numerical pole ($\sim 10^7$) into the core, causing the Warm-Start phase to instantly diverge to $\sim 10^{151}$.
+       - **Fix**: Added hard-core separation: for $r < \sigma$, `c->data[2][j] = c2_val`, and added $\beta\mu^2 / r[j]^3$ *only* for $r \ge \sigma$.
+
+- **Background Process Audit & Cleanup**:
+  - Audited active background tasks and cleanly terminated orphaned benchmark processes to eliminate file lock contention on `output/output_dipolar.dat`.
+
+- **Comprehensive Verification & Final Benchmark Results**:
+  - Verified robust multi-stage convergence across all state points:
+    - Dilute ($\rho^*=0.15, \mu^{*2}=2.00$): MSA (RMSE $g^{000}=0.3395, h^{110}=0.1649, h^{112}=0.3615$), LHNC (RMSE $0.3332, 0.1414, 0.2702$), QHNC (RMSE $0.1963, 0.1115, 0.1211$).
+    - Moderate ($\rho^*=0.40, \mu^{*2}=2.75$): MSA (RMSE $g^{000}=0.5614, h^{110}=0.3431, h^{112}=0.4110$), LHNC (RMSE $0.5288, 0.1822, 0.1955$), QHNC (RMSE $0.4263, 0.1098, 0.0899$).
+    - Dense ($\rho^*=0.60, \mu^{*2}=2.75$): MSA (RMSE $g^{000}=0.1947, h^{110}=0.2696, h^{112}=0.2954$), LHNC (RMSE $0.1215, 0.0963, 0.0515$), QHNC (RMSE $0.0919, 0.0912, 0.0454$).
+    - High-Density ($\rho^*=0.80, \mu^{*2}=2.75$): MSA (RMSE $g^{000}=0.7881$), LHNC (RMSE $0.7628$), QHNC (RMSE $0.0941$).
+  - Warm-Start convergence speedup: QHNC converges in **6 to 16 iterations** across all densities when warm-started.
+  - Re-rendered all publication figures (`fig_plw_angular_grid.png`, `fig_plw_error_comparison.png`, `fig_plw_g000_grid.png`) and recompiled the academic benchmark PDF report [`reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf).
+
 
 

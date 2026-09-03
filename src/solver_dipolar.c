@@ -403,16 +403,29 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
                             c1_val += row0[i] * C110_k[i];
                             c2_val += row2[i] * C112_core_k[i];
                         }
-                        if (r[j] < sigma) {
-                            c->data[0][j] = c0_val;
-                            c->data[1][j] = c1_val;
-                            c->data[2][j] = c2_val;
+                        if (closureID == 0) {
+                            if (r[j] < sigma) {
+                                c->data[0][j] = c0_val;
+                                c->data[1][j] = c1_val;
+                                c->data[2][j] = c2_val;
+                            } else {
+                                c->data[0][j] = 0.0;
+                                c->data[1][j] = 0.0;
+                                c->data[2][j] = beta_mu2 / pow(r[j], 3.0);
+                            }
                         } else {
-                            c->data[0][j] = 0.0;
-                            c->data[1][j] = 0.0;
-                            c->data[2][j] = beta_mu2 / pow(r[j], 3.0);
+                            if (r[j] < sigma) {
+                                c->data[0][j] = c0_val;
+                                c->data[1][j] = c1_val;
+                                c->data[2][j] = c2_val;
+                            } else {
+                                c->data[0][j] = c0_val;
+                                c->data[1][j] = c1_val;
+                                c->data[2][j] = c2_val + beta_mu2 / pow(r[j], 3.0);
+                            }
                         }
                     }
+
 
                     free(C000_k);
                     free(C110_k);
@@ -428,13 +441,16 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
                 closure_MSA_dipolar(c->data, eta->data, r, nodes, beta_mu2, sigma);
             }
         } else {
-            // Update dipole tail outside core for the new temperature
-            for (int i = 0; i < nodes; i++) {
-                if (r[i] > sigma) {
-                    c->data[2][i] = beta_mu2 / pow(r[i], 3.0);
+            // Update dipole tail outside core for the new temperature (only for MSA)
+            if (closureID == 0) {
+                for (int i = 0; i < nodes; i++) {
+                    if (r[i] > sigma) {
+                        c->data[2][i] = beta_mu2 / pow(r[i], 3.0);
+                    }
                 }
             }
         }
+
 
         double alpha = (current_T < 0.3) ? 0.2 : 0.4; // Adaptive Anderson/Picard damping factor
         int hist_count = 0;
