@@ -293,11 +293,12 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
             }
         }
 
+        double alpha = (current_T < 0.3) ? 0.2 : 0.4; // Adaptive Anderson/Picard damping factor
         int hist_count = 0;
         int iter = 0;
         double error = 1.0;
         double stage_tol = (stage < num_stages - 1) ? 1e-4 : tolerance;
-        int max_iter_stage = (stage < num_stages - 1) ? 50 : 500;
+        int max_iter_stage = (stage < num_stages - 1) ? 300 : 600;
 
         while (iter < max_iter_stage && error > stage_tol) {
             

@@ -42,8 +42,12 @@ for T in temps:
             "--knodes", "1024",
             "--rmax", "30.0"
         ]
-        if T < 10.0:
-            cmd += ["--temp-start", "10.0", "--temp-steps", "15"]
+        if T == 1.0:
+            cmd += ["--temp-start", "10.0", "--temp-steps", "10"]
+        elif T == 0.1:
+            cmd += ["--temp-start", "10.0", "--temp-steps", "25"]
+        elif T == 0.01:
+            cmd += ["--temp-start", "10.0", "--temp-steps", "40"]
         
         res = subprocess.run(cmd, cwd=ROOT_DIR, capture_output=True, text=True)
         if res.returncode != 0:
