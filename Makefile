@@ -103,20 +103,29 @@ report:
 benchmark-all:
 	@bash reports/msa_benchmark/scripts/run_all_phases.sh
 
-# Monte Carlo Simulation Benchmark Targets (Fries & Patey JCP 1985)
+# Monte Carlo Simulation Benchmark Targets (Fries & Patey 1985 + Patey, Levesque & Weis 1979)
 benchmark-mc: $(TARGET)
-	@echo "Running Monte Carlo Benchmark Suite (MSA, LHNC, QHNC)..."
+	@echo "Running Fries & Patey (1985) Benchmark Suite (MSA, LHNC, QHNC)..."
 	python3 reports/monte_carlo_benchmark/scripts/run_mc_benchmarks.py
 
 plots-mc:
-	@echo "Generating Monte Carlo Publication Figures (Figures 1 to 6)..."
+	@echo "Generating Fries & Patey (1985) Publication Figures (Figures 1 to 6)..."
 	python3 reports/monte_carlo_benchmark/scripts/generate_mc_plots.py
 
-report-mc: plots-mc
-	@echo "Compiling Monte Carlo Academic Report..."
+benchmark-plw: $(TARGET)
+	@echo "Running Patey, Levesque & Weis (1979) Benchmark Suite (MSA, LHNC, QHNC)..."
+	python3 reports/monte_carlo_benchmark/scripts/run_plw_benchmarks.py
+
+plots-plw:
+	@echo "Generating Patey, Levesque & Weis (1979) Publication Figures..."
+	python3 reports/monte_carlo_benchmark/scripts/generate_plw_plots.py
+
+report-mc: plots-mc plots-plw
+	@echo "Compiling Comprehensive Monte Carlo Academic Report..."
 	@cd reports/monte_carlo_benchmark && pdflatex -interaction=nonstopmode monte_carlo_benchmark_report.tex > /dev/null && pdflatex -interaction=nonstopmode monte_carlo_benchmark_report.tex > /dev/null
 	@echo "$(GREEN)✓ Monte Carlo Report compiled: reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf$(NC)"
 
-mc-all: benchmark-mc plots-mc report-mc
+mc-all: benchmark-mc plots-mc benchmark-plw plots-plw report-mc
 
-.PHONY: all clean cleanall dirs test help install uninstall benchmark-phase1 benchmark-phase2 benchmark-phase3 benchmark-plots report benchmark-all benchmark-mc plots-mc report-mc mc-all
+.PHONY: all clean cleanall dirs test help install uninstall benchmark-phase1 benchmark-phase2 benchmark-phase3 benchmark-plots report benchmark-all benchmark-mc plots-mc benchmark-plw plots-plw report-mc mc-all
+

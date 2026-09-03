@@ -357,11 +357,11 @@ int main(int argc, char *argv[]) {
         }
 
         int closure_id_int = 0; // Default MSA
-        if (strcmp(closure_str, "LHNC") == 0) closure_id_int = 1;
-        else if (strcmp(closure_str, "QHNC") == 0) closure_id_int = 2;
-        else if (strcmp(closure_str, "RHNC") == 0) closure_id_int = 3;
+        if (strcmp(closure_str, "LHNC") == 0 || strcmp(closure_str, "1") == 0) closure_id_int = 1;
+        else if (strcmp(closure_str, "QHNC") == 0 || strcmp(closure_str, "2") == 0) closure_id_int = 2;
+        else if (strcmp(closure_str, "RHNC") == 0 || strcmp(closure_str, "3") == 0) closure_id_int = 3;
         else if (strcmp(closure_str, "HNC") == 0) closure_id_int = 1; // Fallback to LHNC for "HNC" input
-        else if (strcmp(closure_str, "MSA") == 0) closure_id_int = 0;
+        else if (strcmp(closure_str, "MSA") == 0 || strcmp(closure_str, "0") == 0) closure_id_int = 0;
         else if (strcmp(closure_str, "RY") == 0) {
              fprintf(stderr, "Warning: RY no esta implementado para Dipolar aun. Usando LHNC.\n");
              closure_id_int = 1;

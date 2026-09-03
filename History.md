@@ -195,3 +195,49 @@
   - Extended [`Makefile`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/Makefile) with `benchmark-mc`, `plots-mc`, `report-mc`, and `mc-all`.
   - Updated [`.gitignore`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/.gitignore) to un-ignore test `.dat` files while strictly preventing tracking of copyrighted `.png` scanned images in `test/`.
 
+## Density Evolution Benchmark Suite: Patey, Levesque & Weis (1979) (2026-09-03)
+
+- **Comprehensive Density Progression Benchmark**:
+  - Integrated and validated all 10 digitized Monte Carlo simulation datasets from the classic work of Patey, Levesque, and Weis (*Mol. Phys.* **38**, 219, 1979) across four distinct density regimes at $T^* = 1.0$:
+    1. **Dilute Gas Regime ($\rho^* = 0.15, \mu^{*2} = 2.00, \phi \approx 0.0785$)**:
+       - Fig 1: $g^{000}(r)$, Fig 6: $h^{110}(r)$, Fig 9: $h^{112}(r)$.
+    2. **Moderate Liquid Regime ($\rho^* = 0.40, \mu^{*2} = 2.75, \phi \approx 0.2094$)**:
+       - Fig 2: $g^{000}(r)$, Fig 7: $h^{110}(r)$, Fig 10: $h^{112}(r)$.
+    3. **Dense Liquid Regime ($\rho^* = 0.60, \mu^{*2} = 2.75, \phi \approx 0.3142$)**:
+       - Fig 3: $g^{000}(r)$, Fig 8: $h^{110}(r)$, Fig 11: $h^{112}(r)$.
+    4. **High-Density Liquid Regime ($\rho^* = 0.80, \mu^{*2} = 2.75, \phi \approx 0.4189$)**:
+       - Fig 4: $g^{000}(r)$.
+
+- **CLI Argument Parser Enhancement (`src/main.c`)**:
+  - Upgraded closure parsing logic in `main.c` to accept both string names (`MSA`, `LHNC`, `QHNC`, `RHNC`) and numeric IDs (`0`, `1`, `2`, `3`), preventing inadvertent fallback to MSA.
+
+- **Systematic Evaluation across the Three Operational Phases**:
+  - **Phase 1 (Cold Start, $\mathbf{c}^{(0)} = \mathbf{0}$)**:
+    - $\rho^*=0.15$: MSA (13 iters), LHNC (24 iters), QHNC (30 iters).
+    - $\rho^*=0.40$: MSA (34 iters), LHNC (62 iters).
+    - $\rho^*=0.60$: MSA (25 iters), LHNC (63 iters).
+    - $\rho^*=0.80$: MSA (59 iters); LHNC requires continuation ramps at very high density.
+  - **Phase 2 (Geometric Temperature Continuation)**:
+    - Successfully traversed from $T^* = 10.0$ down to $T^* = 1.0$, achieving full convergence across all densities (MSA: 24--99 iters, LHNC: 24--99 iters).
+  - **Phase 3 (Warm-Start Ingestion)**:
+    - Direct ingestion of structure factor profiles achieved convergence in **1 iteration** for LHNC across all density regimes.
+
+- **Microstructural Physics & Quantitative Error Trends**:
+  - **Density Evolution of MSA Error**: Demonstrated that MSA error grows monotonically with liquid density:
+    - $\text{RMSE}(g^{000})$ increases from $0.0543$ ($\rho^*=0.15$) to $0.1707$ ($\rho^*=0.40$), $0.3805$ ($\rho^*=0.60$), and $0.7635$ ($\rho^*=0.80$).
+    - At high density, MSA underpredicts the contact correlation peak by more than 1.5 units due to the absence of exponential core repulsion.
+  - **Superior Fidelity of Non-Linear Closures**:
+    - LHNC maintains high accuracy across all regimes ($\text{RMSE}(g^{000}) = 0.0381$ at $\rho^*=0.15$, $0.0385$ at $\rho^*=0.40$, $0.0617$ at $\rho^*=0.60$, and $0.0946$ at $\rho^*=0.80$).
+    - In angular channels, LHNC reduces dipolar projection error ($\text{RMSE}(h^{110})$) to $\le 0.0911$ compared to $\ge 0.3236$ in MSA.
+
+- **Publication Figures & Extended Academic LaTeX Report**:
+  - Created automated runner [`reports/monte_carlo_benchmark/scripts/run_plw_benchmarks.py`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/scripts/run_plw_benchmarks.py) and plotter [`reports/monte_carlo_benchmark/scripts/generate_plw_plots.py`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/scripts/generate_plw_plots.py).
+  - Generated comprehensive multi-panel publication figures in `reports/monte_carlo_benchmark/plots/`:
+    - `fig_plw_g000_grid.{pdf,png}`: 4-panel progression of $g^{000}(r)$ across $\rho^* \in \{0.15, 0.40, 0.60, 0.80\}$.
+    - `fig_plw_angular_grid.{pdf,png}`: 6-panel grid of $h^{110}(r)$ and $h^{112}(r)$ across densities.
+    - `fig_plw_error_comparison.{pdf,png}`: Comparative logarithmic RMSE bar charts.
+    - `fig_plw_1_g000_rho015` through `fig_plw_4_g000_rho08`: High-resolution individual state plots.
+  - Extended [`reports/monte_carlo_benchmark/monte_carlo_benchmark_report.tex`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/monte_carlo_benchmark_report.tex) with Section 5 ("Density Evolution Benchmark: Patey, Levesque \& Weis 1979"), Table 2 (`table_plw_summary.tex`), and citations, and compiled [`reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/reports/monte_carlo_benchmark/monte_carlo_benchmark_report.pdf).
+  - Updated [`Makefile`](file:///home/jinzo/Desktop/codigos/OZE_c_solver/Makefile) targets `benchmark-plw`, `plots-plw`, and `mc-all`.
+
+

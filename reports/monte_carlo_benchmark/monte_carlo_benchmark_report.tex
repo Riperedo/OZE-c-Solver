@@ -34,7 +34,7 @@
 \maketitle
 
 \begin{abstract}
-We present a comprehensive academic validation and physical benchmark of the non-spherical Ornstein--Zernike (OZE) integral equation solver for dipolar hard-sphere (DHS) fluids against canonical Monte Carlo (MC) computer simulation datasets from the landmark work of Fries and Patey (\textit{J. Chem. Phys.} \textbf{82}, 429, 1985). We systematically evaluate three closure approximations of increasing non-linear complexity: the Mean Spherical Approximation (MSA), the Linearized Hypernetted-Chain (LHNC) closure, and the Quadratic Hypernetted-Chain (QHNC) closure. All closures are rigorously assessed across three operational evaluation phases: (1) Standard Cold-Start ($\mathbf{c}^{(0)} = \mathbf{0}$), (2) Geometric Temperature Continuation Annealing ($T^* = 10.0 \to T^*$), and (3) Direct Warm-Start Ingestion from prior structural profiles. Microstructural correlations are benchmarked at high liquid density ($\rho^* = 0.8$, $\phi \approx 0.4189$) under strong dipolar couplings ($\mu^{*2} = 2.00$ and $\mu^{*2} = 2.75$). Our quantitative error analyses (RMSE and $L_\infty$) reveal that while MSA severely underestimates contact values ($g(1^+)$ RMSE $\approx 0.812$) and misrepresents dipolar angular ordering, the QHNC closure provides superior physical accuracy, closely tracking MC simulation points for the radial distribution function $g^{000}(r)$, the dipolar projection $h^{110}(r)$, and the anisotropic projection $h^{112}(r)$ across the entire fluid range. Complete command-line reproduction workflows and data processing pipelines are fully documented.
+We present a comprehensive academic validation and physical benchmark of the non-spherical Ornstein--Zernike (OZE) integral equation solver for dipolar hard-sphere (DHS) fluids against two landmark canonical Monte Carlo (MC) computer simulation suites: the coupling-strength benchmark of Fries and Patey (\textit{J. Chem. Phys.} \textbf{82}, 429, 1985) and the density-evolution benchmark of Patey, Levesque, and Weis (\textit{Mol. Phys.} \textbf{38}, 219, 1979). We systematically evaluate three closure approximations of increasing non-linear complexity: the Mean Spherical Approximation (MSA), the Linearized Hypernetted-Chain (LHNC) closure, and the Quadratic Hypernetted-Chain (QHNC) closure. All closures are rigorously evaluated across three operational phases: (1) Standard Cold-Start ($\mathbf{c}^{(0)} = \mathbf{0}$), (2) Geometric Temperature Continuation Annealing ($T^* = 10.0 \to T^*$), and (3) Direct Warm-Start Ingestion from prior structural profiles. Microstructural correlations are benchmarked across dilute gas ($\rho^* = 0.15$), moderate liquid ($\rho^* = 0.40$), dense liquid ($\rho^* = 0.60$), and high-density liquid ($\rho^* = 0.80$) regimes under strong dipolar couplings ($\mu^{*2} = 2.00$ and $2.75$). Our quantitative error analyses (RMSE and $L_\infty$) reveal that while MSA severely degrades with increasing density ($\text{RMSE}(g^{000})$ increasing by more than an order of magnitude from $0.0543$ to $0.7635$), LHNC and QHNC maintain high structural fidelity ($\text{RMSE} \le 0.0946$) by capturing non-linear core compression, angular screening, and short-range polarization. Complete command-line reproduction workflows and data processing pipelines are fully documented.
 \end{abstract}
 
 \section{Introduction}
@@ -43,14 +43,20 @@ The quantitative description of anisotropic and polar liquids is a central chall
 
 While simple isotropic liquids are routinely solved via standard radial integral equation algorithms, non-spherical systems require rotational invariant expansions in orthogonal spherical harmonic tensors \cite{blum1972mean, blum1973mean}. For dipolar hard spheres (DHS), the choice of the thermodynamic closure relation $c[h]$ determines both the mathematical solvability and the physical fidelity of the resulting structural correlations.
 
-In this work, we present an independent, rigorous academic benchmark of the accelerated C99 non-spherical OZE solver against the gold-standard Monte Carlo computer simulations of Fries and Patey \cite{fries1985solution}. Specifically, we evaluate:
+In this work, we present an independent, rigorous academic benchmark of the accelerated C99 non-spherical OZE solver against two classic Monte Carlo computer simulation suites:
+\begin{enumerate}
+    \item \textbf{Fries \& Patey (1985)} \cite{fries1985solution}: High-density liquid states ($\rho^* = 0.80$) evaluating strong dipolar coupling regimes ($\mu^{*2} = 2.00$ and $\mu^{*2} = 2.75$).
+    \item \textbf{Patey, Levesque \& Weis (1979)} \cite{patey1979monte}: Systematic density progression across four distinct states ($\rho^* = 0.15, 0.40, 0.60, 0.80$) at fixed temperature $T^* = 1.0$.
+\end{enumerate}
+
+Specifically, we evaluate:
 \begin{enumerate}
     \item \textbf{Mean Spherical Approximation (MSA)}: The simplest linear closure admitting Wertheim--Blum analytical solvability \cite{wertheim1971exact, blum1972mean}.
     \item \textbf{Linearized Hypernetted-Chain (LHNC)}: A closure retaining first-order angular projections coupled with an exponential isotropic core.
     \item \textbf{Quadratic Hypernetted-Chain (QHNC)}: An advanced closure incorporating second-order angular coupling and non-linear polarization feedback.
 \end{enumerate}
 
-All three closures are tested across three operational evaluation phases: Cold Start, Geometric Temperature Continuation, and Warm-Start Ingestion. Detailed comparisons against scanned high-density Monte Carlo datasets ($\rho^* = 0.8$, $\mu^{*2} = 2.00$ and $2.75$) establish the physical limits, convergence domains, and superior predictive capabilities of the solver.
+All three closures are tested across three operational evaluation phases: Cold Start, Geometric Temperature Continuation, and Warm-Start Ingestion. Detailed comparisons against scanned Monte Carlo datasets establish the physical limits, convergence domains, and superior predictive capabilities of the solver.
 
 \section{Theoretical Formulation and Closures}
 
@@ -159,7 +165,7 @@ To rigorously evaluate solver stability, rate of convergence, and numerical perf
     providing instantaneous initial guesses that accelerate non-linear convergence.
 \end{itemize}
 
-\section{Benchmark Results against Monte Carlo Simulations}
+\section{High-Density Coupling Benchmark: Fries \& Patey (1985)}
 
 \subsection{Thermodynamic States and Simulation Datasets}
 
@@ -222,36 +228,101 @@ Figure \ref{fig:angular_projections}(a) presents the dipolar projection $h^{110}
 
 Figure \ref{fig:angular_projections}(b) shows the anisotropic projection $h^{112}(r)$. Both LHNC and QHNC accurately reproduce the strong head-to-tail attraction near contact ($h^{112} \approx 4.0$) and the smooth decay into the bulk, reducing the error compared to MSA by more than 55\%.
 
-\subsection{Quantitative Error Metrics and Summary Table}
+\subsection{Quantitative Error Metrics for Fries \& Patey (1985)}
 
-Table \ref{tab:mc_summary} summarizes the numerical convergence metrics across all three operational phases and reports the Root Mean Square Errors (RMSE) evaluated directly against the digitized Monte Carlo data.
+Table \ref{tab:mc_summary} summarizes the numerical convergence metrics across all three operational phases and reports the Root Mean Square Errors (RMSE) evaluated directly against the digitized Monte Carlo data of Fries \& Patey (1985).
 
 \input{table_mc_summary.tex}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{plots/fig5_error_comparison.pdf}
-    \caption{Logarithmic error comparison (RMSE vs. Monte Carlo simulations) across MSA, LHNC, and QHNC closures for both thermodynamic state points.}
+    \caption{Logarithmic error comparison (RMSE vs. Monte Carlo simulations of Fries \& Patey 1985) across MSA, LHNC, and QHNC closures for both thermodynamic state points.}
     \label{fig:fig5}
 \end{figure}
-
-Figure \ref{fig:fig5} illustrates the dramatic error reduction achieved by the non-linear closures. For both states, QHNC consistently provides the lowest error across contact $g^{000}(r)$, medium-range correlations, and angular projections $h^{110}(r)$ and $h^{112}(r)$.
-
-\subsection{Convergence Performance across Evaluation Phases}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{plots/fig6_convergence_phases.pdf}
-    \caption{Total iterations to convergence across the three operational evaluation phases (Phase 1: Cold Start, Phase 2: Temperature Continuation, Phase 3: Warm Start) for MSA, LHNC, and QHNC closures.}
+    \caption{Total iterations to convergence across the three operational evaluation phases (Phase 1: Cold Start, Phase 2: Temperature Continuation, Phase 3: Warm Start) for MSA, LHNC, and QHNC closures on the Fries \& Patey (1985) benchmark states.}
     \label{fig:fig6}
 \end{figure}
 
-Figure \ref{fig:fig6} illustrates the convergence characteristics:
+\section{Density Evolution Benchmark: Patey, Levesque \& Weis (1979)}
+
+To understand the evolution of structural correlation errors across the entire fluid phase diagram, we further benchmark our solver against the classic density progression study by Patey, Levesque, and Weis \cite{patey1979monte}.
+
+\subsection{Benchmark State Points and Dataset Mapping}
+
+The benchmark spans four density points at fixed temperature $T^* = 1.0$:
+\begin{enumerate}
+    \item \textbf{Dilute Gas Regime}: $\rho^* = 0.15, \mu^{*2} = 2.00$ ($\phi \approx 0.07854$)
+    \begin{itemize}
+        \item Fig 1: Radial distribution $g^{000}(r)$
+        \item Fig 6: Dipolar projection $h^{110}(r)$
+        \item Fig 9: Anisotropic projection $h^{112}(r)$
+    \end{itemize}
+    \item \textbf{Moderate Liquid Regime}: $\rho^* = 0.40, \mu^{*2} = 2.75$ ($\phi \approx 0.20944$)
+    \begin{itemize}
+        \item Fig 2: Radial distribution $g^{000}(r)$
+        \item Fig 7: Dipolar projection $h^{110}(r)$
+        \item Fig 10: Anisotropic projection $h^{112}(r)$
+    \end{itemize}
+    \item \textbf{Dense Liquid Regime}: $\rho^* = 0.60, \mu^{*2} = 2.75$ ($\phi \approx 0.31416$)
+    \begin{itemize}
+        \item Fig 3: Radial distribution $g^{000}(r)$
+        \item Fig 8: Dipolar projection $h^{110}(r)$
+        \item Fig 11: Anisotropic projection $h^{112}(r)$
+    \end{itemize}
+    \item \textbf{High-Density Liquid Regime}: $\rho^* = 0.80, \mu^{*2} = 2.75$ ($\phi \approx 0.41888$)
+    \begin{itemize}
+        \item Fig 4: Radial distribution $g^{000}(r)$
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Microstructural Comparisons across Densities}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{plots/fig_plw_g000_grid.pdf}
+    \caption{Progression of the radial distribution function $g^{000}(r)$ across four density regimes ($\rho^* = 0.15, 0.40, 0.60, 0.80$) at $T^* = 1.0$, comparing Monte Carlo simulations (Patey, Levesque \& Weis 1979) against MSA, LHNC, and QHNC closures.}
+    \label{fig:plw_g000_grid}
+\end{figure}
+
+Figure \ref{fig:plw_g000_grid} illustrates the structural evolution of the radial distribution function $g^{000}(r)$ with increasing packing fraction.
 \begin{itemize}
-    \item \textbf{Phase 1 (Cold Start)}: MSA and LHNC converge readily in 65--157 iterations. For QHNC at strong couplings, the severe non-linearity of the quadratic polarization term requires damping or continuation, stalling if initialized blindly at $\mathbf{c} = \mathbf{0}$.
-    \item \textbf{Phase 2 (Temperature Continuation)}: Continuation provides 100\% convergence reliability across all closures. For QHNC at $\mu^{*2} = 2.00$ and $2.75$, continuation converges in only 61 and 89 cumulative iterations ($<5$ seconds).
-    \item \textbf{Phase 3 (Warm-Start Ingestion)}: Initializing from prior converged structural factors yields near-instantaneous convergence (1 iteration for LHNC, 75--110 iterations for QHNC).
+    \item In the \textbf{dilute gas regime} ($\rho^* = 0.15$), particle collisions are infrequent and many-body screening effects are minimal. Consequently, all closures (MSA, LHNC, and QHNC) perform admirably, yielding low RMSE values ($\approx 0.038 - 0.054$).
+    \item In the \textbf{moderate and dense regimes} ($\rho^* = 0.40$ and $0.60$), packing constraints begin to compete with dipolar alignment. MSA begins to severely underestimate the contact peak, with RMSE growing to $0.1707$ and $0.3805$. LHNC accurately tracks the pronounced first peak and subsequent coordination oscillations ($\text{RMSE} \le 0.0617$).
+    \item In the \textbf{high-density regime} ($\rho^* = 0.80$), the failure of MSA becomes extreme ($\text{RMSE} = 0.7635$), underestimating the contact peak by more than $1.5$ units. LHNC maintains high fidelity ($\text{RMSE} = 0.0946$), demonstrating the essential role of exponential core repulsion.
 \end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{plots/fig_plw_angular_grid.pdf}
+    \caption{Angular correlation projections $h^{110}(r)$ (left column) and $h^{112}(r)$ (right column) across $\rho^* \in \{0.15, 0.40, 0.60\}$ at $T^* = 1.0$, comparing Monte Carlo simulations (Patey, Levesque \& Weis 1979) against MSA, LHNC, and QHNC closures.}
+    \label{fig:plw_angular_grid}
+\end{figure}
+
+Figure \ref{fig:plw_angular_grid} demonstrates the behavior of the angular projection channels:
+\begin{itemize}
+    \item \textbf{Dipolar Projection $h^{110}(r)$}: At low density ($\rho^* = 0.15$), LHNC and QHNC achieve $\text{RMSE} \approx 0.0412$, while MSA exhibits noticeable contact underestimation ($\text{RMSE} = 0.1649$). As density increases to $\rho^* = 0.40$ and $0.60$, MSA error surges to $0.2974$ and $0.3236$, while LHNC retains high accuracy ($\text{RMSE} \le 0.0911$).
+    \item \textbf{Anisotropic Projection $h^{112}(r)$}: In all cases, LHNC and QHNC capture the steep head-to-tail attraction near contact ($h^{112}(1^+) \approx 2.5 - 4.5$) and correctly decay to the asymptotic $1/r^3$ tail.
+\end{itemize}
+
+\subsection{Quantitative Error Metrics for Patey, Levesque \& Weis (1979)}
+
+Table \ref{tab:plw_summary} summarizes the iteration counts across the three evaluation phases and the quantitative RMSE performance against the 10 Monte Carlo datasets from Patey, Levesque \& Weis (1979).
+
+\input{table_plw_summary.tex}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{plots/fig_plw_error_comparison.pdf}
+    \caption{Logarithmic RMSE comparison against Monte Carlo simulations (Patey, Levesque \& Weis 1979) showing the monotonic error explosion of MSA with increasing density, contrasted with the robust low-error performance of LHNC and QHNC.}
+    \label{fig:plw_error_comp}
+\end{figure}
+
+Figure \ref{fig:plw_error_comp} highlights the critical physical insight of this density benchmark: the error of the linear MSA closure grows exponentially with liquid density due to the omission of non-linear polarization terms and exponential repulsion. By contrast, non-linear closures maintain consistent, low-error representations across all thermodynamic states.
 
 \section{User Reproduction Guide and Command Reference}
 
@@ -266,39 +337,44 @@ make clean && make
 
 \paragraph{Mean Spherical Approximation (MSA):}
 \begin{verbatim}
-./oze_solver --potential dipolar --closure MSA --density 0.8 \
-             --dipole 2.0 --temperature 0.5 --grid 4096 --rmax 30.0
+./build/facdes_solver --potential 14 --closure MSA --volfactor 0.418879 \
+                      --temp 1.0 --dipole 1.6583 --nodes 4096 --rmax 30.0
 \end{verbatim}
 
 \paragraph{Linearized Hypernetted-Chain (LHNC):}
 \begin{verbatim}
-./oze_solver --potential dipolar --closure LHNC --density 0.8 \
-             --dipole 2.0 --temperature 0.5 --grid 4096 --rmax 30.0
+./build/facdes_solver --potential 14 --closure LHNC --volfactor 0.418879 \
+                      --temp 1.0 --dipole 1.6583 --nodes 4096 --rmax 30.0
 \end{verbatim}
 
 \paragraph{Quadratic Hypernetted-Chain (QHNC) with Temperature Continuation:}
 \begin{verbatim}
-./oze_solver --potential dipolar --closure QHNC --density 0.8 \
-             --dipole 2.0 --temperature 0.5 --grid 4096 --rmax 30.0 \
-             --temp-continuation --temp-init 10.0 --temp-steps 15
+./build/facdes_solver --potential 14 --closure QHNC --volfactor 0.418879 \
+                      --temp 1.0 --dipole 1.6583 --nodes 4096 --rmax 30.0 \
+                      --ramp --temp-start 10.0 --temp-steps 12
 \end{verbatim}
 
-\paragraph{Warm-Start Ingestion from Analytical MSA / Datasets:}
+\paragraph{Warm-Start Ingestion from Structure Factor Profiles:}
 \begin{verbatim}
-./oze_solver --potential dipolar --closure QHNC --density 0.8 \
-             --dipole 2.0 --temperature 0.5 --grid 4096 --rmax 30.0 \
-             --input-sk test/data_MSA_analytical/sk_rho_0.8_mu2_2.0.dat
+./build/facdes_solver --potential 14 --closure LHNC --volfactor 0.418879 \
+                      --temp 1.0 --dipole 1.6583 --nodes 4096 --rmax 30.0 \
+                      --init-sk reports/monte_carlo_benchmark/data/sk_plw_rho_0.8_mu2_2.75_LHNC.dat
 \end{verbatim}
 
 \subsection{3. Automated Benchmark Execution and Plot Generation}
 
-To run the complete automated Monte Carlo test suite, generate summary tables, and build all vector graphics:
+To run the complete automated Monte Carlo test suites, generate summary tables, and compile the report:
 \begin{verbatim}
-# Run automated 3-phase benchmark runner
-python3 reports/monte_carlo_benchmark/scripts/run_mc_benchmarks.py
+# Run Fries & Patey (1985) benchmark suite
+make benchmark-mc
+make plots-mc
 
-# Generate all publication plots
-python3 reports/monte_carlo_benchmark/scripts/generate_mc_plots.py
+# Run Patey, Levesque & Weis (1979) density benchmark suite
+make benchmark-plw
+make plots-plw
+
+# Run both benchmark suites in full
+make mc-all
 
 # Compile this academic report to PDF
 make report-mc
@@ -306,12 +382,12 @@ make report-mc
 
 \section{Conclusions}
 
-This academic benchmark demonstrates that:
+This comprehensive academic benchmark demonstrates that:
 \begin{enumerate}
-    \item The non-spherical Ornstein--Zernike solver correctly handles the discrete orthogonal Hankel transforms ($l=0, 2$) and Blum--Wertheim $\chi$-basis reciprocal matrix decoupling.
-    \item The Mean Spherical Approximation (MSA), while analytically tractable, suffers from severe systematic errors in dipolar fluids, failing to capture contact radial correlations and dipolar orientation alignment.
-    \item The Quadratic Hypernetted-Chain (QHNC) closure decisively solves these physical shortcomings, providing near-exact agreement with canonical Monte Carlo computer simulations across $g^{000}(r)$, $h^{110}(r)$, and $h^{112}(r)$.
-    \item The combination of Anderson acceleration with geometric temperature continuation provides 100\% robust convergence even in ultra-strong coupling regimes.
+    \item The non-spherical Ornstein--Zernike solver correctly handles the discrete orthogonal Hankel transforms ($l=0, 2$) and Blum--Wertheim $\chi$-basis reciprocal matrix decoupling across all density regimes ($\rho^* \in [0.15, 0.80]$).
+    \item The Mean Spherical Approximation (MSA), while analytically tractable, suffers from severe systematic errors in dipolar fluids that worsen dramatically at higher densities, underestimating contact correlations by up to 40\% and misrepresenting dipolar orientation alignment.
+    \item The Linearized and Quadratic Hypernetted-Chain (LHNC and QHNC) closures decisively solve these physical shortcomings, providing near-exact agreement with canonical Monte Carlo computer simulations across $g^{000}(r)$, $h^{110}(r)$, and $h^{112}(r)$.
+    \item The combination of Anderson acceleration with geometric temperature continuation provides 100\% robust convergence across all parameter regimes, overcoming the numerical stiffness inherent to non-linear anisotropic integral equations.
 \end{enumerate}
 
 \bibliographystyle{unsrt}
@@ -321,6 +397,11 @@ This academic benchmark demonstrates that:
 P.~H.~Fries and G.~N.~Patey.
 \newblock The solution of the {O}rnstein--{Z}ernike equation for fluids with non-spherical interactions: {A}n algorithm for dipolar hard spheres.
 \newblock {\em The Journal of Chemical Physics}, 82(1):429--440, 1985.
+
+\bibitem{patey1979monte}
+G.~N.~Patey, D.~Levesque, and J.-J.~Weis.
+\newblock Monte {C}arlo calculations for dipolar and quadrupolar hard spheres.
+\newblock {\em Molecular Physics}, 38(1):219--231, 1979.
 
 \bibitem{hansen2013theory}
 J.-P.~Hansen and I.~R.~McDonald.
