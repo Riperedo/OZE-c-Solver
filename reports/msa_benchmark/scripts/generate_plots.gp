@@ -65,7 +65,7 @@ set multiplot layout 2,2 title "Patey Angular Projections S^{110}(k) and S^{112}
 set title "S^{110}(k) at T* = 10.0" font "Helvetica,12"
 set ylabel "S^{110}(k)"
 set xrange [0:18]
-set yrange [-0.002:0.004]
+set yrange [0.998:1.004]
 set key top right
 plot "reports/msa_benchmark/data/ana_phi_0.1_T_10.00.dat" u 1:3 w l ls 2 title "{/Symbol f}=0.1 (Analytic)", \
      "reports/msa_benchmark/data/num_phi_0.1_T_10.00.dat" u 1:3 every 4 w p ls 1 title "{/Symbol f}=0.1 (Numerical)", \
@@ -88,7 +88,7 @@ plot "reports/msa_benchmark/data/ana_phi_0.1_T_10.00.dat" u 1:4 w l ls 2 title "
 # Panel (2,1): S110 at T=1.0
 set title "S^{110}(k) at T* = 1.0" font "Helvetica,12"
 set ylabel "S^{110}(k)"
-set yrange [-0.04:0.08]
+set yrange [0.96:1.08]
 plot "reports/msa_benchmark/data/ana_phi_0.1_T_1.00.dat" u 1:3 w l ls 2 title "{/Symbol f}=0.1 (Analytic)", \
      "reports/msa_benchmark/data/num_phi_0.1_T_1.00.dat" u 1:3 every 4 w p ls 1 title "{/Symbol f}=0.1 (Numerical)", \
      "reports/msa_benchmark/data/ana_phi_0.3_T_1.00.dat" u 1:3 w l ls 4 title "{/Symbol f}=0.3 (Analytic)", \

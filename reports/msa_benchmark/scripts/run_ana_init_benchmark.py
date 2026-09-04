@@ -51,7 +51,7 @@ for T in temps:
             k_ana, s000_a, s110_a, s112_a = ana_data[:,0], ana_data[:,1], ana_data[:,2], ana_data[:,3]
             k_num, s000_n, s110_n, s112_n = num_data[:,0], num_data[:,1], num_data[:,2], num_data[:,3]
             s1_n = num_data[:, 5]
-            s1_a = (s110_a + 1.0) - s112_a
+            s1_a = s110_a - s112_a
             
             mask = (k_ana >= 0.5) & (k_ana <= 20.0)
             k_eval = k_ana[mask]

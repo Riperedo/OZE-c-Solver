@@ -138,7 +138,7 @@ static int load_analytical_sk(const char *filepath, const double *k_grid, int no
             double k_max_f = k_file[count - 1];
             double decay = exp(-(target_k - k_max_f) / 10.0);
             S000_out[i] = 1.0 + (s000_file[count - 1] - 1.0) * decay;
-            S110_out[i] = s110_file[count - 1] * decay;
+            S110_out[i] = 1.0 + (s110_file[count - 1] - 1.0) * decay;
             S112_out[i] = s112_file[count - 1] * decay;
         } else {
             int low = 0, high = count - 1;
@@ -381,8 +381,8 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
                     for (int i = 0; i < nodes; i++) {
                         C000_k[i] = (1.0 - 1.0 / S000_in[i]) / rho;
 
-                        double S0_val = (S110_in[i] + 1.0) + 2.0 * S112_in[i];
-                        double S1_val = (S110_in[i] + 1.0) - S112_in[i];
+                        double S0_val = S110_in[i] + 2.0 * S112_in[i];
+                        double S1_val = S110_in[i] - S112_in[i];
 
                         double C0_val = (3.0 / rho) * (1.0 - 1.0 / S0_val);
                         double C1_val = (3.0 / rho) * (1.0 - 1.0 / S1_val);
@@ -767,7 +767,7 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
             double S1 = (fabs(denom1) > 1e-12) ? 1.0 / denom1 : 1e12;
 
             double S000 = 1.0 + rho * H_k->data[0][i];
-            double S110 = (S0 + 2.0 * S1) / 3.0 - 1.0;
+            double S110 = (S0 + 2.0 * S1) / 3.0;
             double S112 = (S0 - S1) / 3.0;
 
             fprintf(fp_sk, "%.5e  %.5e  %.5e  %.5e  %.5e  %.5e\n",

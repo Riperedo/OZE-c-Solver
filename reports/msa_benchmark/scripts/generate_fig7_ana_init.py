@@ -37,7 +37,7 @@ for phi in phis_to_plot:
     ax.plot(ana[:, 0], ana[:, 2], '--', color=c, label=f'Ana $\\phi={phi:.1f}$')
     ax.plot(num[:, 0], num[:, 2], '-', color=c, label=f'Num $\\phi={phi:.1f}$')
 ax.set_xlim(0, 15)
-ax.set_ylim(-1.5, 4.0)
+ax.set_ylim(-0.5, 5.0)
 ax.set_xlabel('$k\\sigma$')
 ax.set_ylabel('$S^{110}(k)$')
 ax.set_title('(a) $S^{110}(k)$ at $T^* = 0.10$ (Direct Warm-Start)')

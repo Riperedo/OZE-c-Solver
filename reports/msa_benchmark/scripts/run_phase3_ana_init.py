@@ -40,8 +40,8 @@ def compute_rmse(num_file, ana_file):
         rmse_110 = np.sqrt(np.mean((s110_num_interp - s110_ana)**2))
         rmse_112 = np.sqrt(np.mean((s112_num_interp - s112_ana)**2))
         
-        s1_num = (s110_num_interp + 1.0) - s112_num_interp
-        s1_ana = (s110_ana + 1.0) - s112_ana
+        s1_num = s110_num_interp - s112_num_interp
+        s1_ana = s110_ana - s112_ana
         rmse_1 = np.sqrt(np.mean((s1_num - s1_ana)**2))
         
         return rmse_000, rmse_110, rmse_112, rmse_1

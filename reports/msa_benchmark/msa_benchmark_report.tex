@@ -111,8 +111,8 @@ The static structure factor modes corresponding to the MSA analytical dataset ar
     S^{000}(k) &= 1 + \rho H^{000}(k) = \frac{1}{1 - \rho C^{000}(k)}, \\
     S^0(k)     &= \frac{1}{1 - \frac{\rho}{3} C^0(k)}, \\
     S^1(k)     &= \frac{1}{1 - \frac{\rho}{3} C^1(k)}, \\
-    S^{110}(k) &= \frac{1}{3} \left[ S^0(k) + 2 S^1(k) \right] - 1, \\
-    S^{112}(k) &= \frac{1}{3} \left[ S^0(k) - S^1(k) \right].
+    S^{110}(k) &= \frac{1}{3} \left[ S^0(k) + 2 S^1(k) \right] = 1 + \frac{\rho}{3} H^{110}(k), \\
+    S^{112}(k) &= \frac{1}{3} \left[ S^0(k) - S^1(k) \right] = \frac{\rho}{3} H^{112}(k).
 \end{align}
 
 \section{Numerical Methodology}
@@ -331,8 +331,8 @@ stored in \texttt{data/input\_sk/sk\_phi\_<phi>\_T\_<T>.dat}.
 \subsubsection{Mathematical Inversion and Asymptotic Corrections}
 The solver recovers the decoupled modes:
 \begin{align}
-    S^0(k) &= \left( S^{110}(k) + 1 \right) + 2 S^{112}(k), \\
-    S^1(k) &= \left( S^{110}(k) + 1 \right) - S^{112}(k).
+    S^0(k) &= S^{110}(k) + 2 S^{112}(k), \\
+    S^1(k) &= S^{110}(k) - S^{112}(k).
 \end{align}
 Direct correlation functions in Fourier space are obtained via exact inversion:
 \begin{align}
@@ -342,7 +342,7 @@ Direct correlation functions in Fourier space are obtained via exact inversion:
 \end{align}
 To eliminate high-frequency Fourier truncation artifacts, smooth exponential decay is enforced for $k > k_{\max}^{\text{file}}$:
 \begin{equation}
-    S^{000}(k) \to 1.0, \quad S^{110}(k) \to 0.0, \quad S^{112}(k) \to 0.0.
+    S^{000}(k) \to 1.0, \quad S^{110}(k) \to 1.0, \quad S^{112}(k) \to 0.0.
 \end{equation}
 The core direct correlations are then computed via discrete inverse Hankel transforms after subtracting the analytical long-range tail $C_{\text{tail}}^{112}(k)$:
 \begin{align}
