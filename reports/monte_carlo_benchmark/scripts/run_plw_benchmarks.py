@@ -63,7 +63,8 @@ PLW_STATES = {
 CLOSURES = [
     {"name": "MSA", "id": 0},
     {"name": "LHNC", "id": 1},
-    {"name": "QHNC", "id": 2}
+    {"name": "QHNC", "id": 2},
+    {"name": "RHNC", "id": 3}
 ]
 
 def run_solver(closure_name, phi, temp, dipole, rmax=30.0, nodes=4096, knodes=1024, ramp=False, temp_start=10.0, temp_steps=12, init_sk=None):
@@ -241,7 +242,7 @@ def main():
         f.write("% Auto-generated Patey, Levesque & Weis (1979) error comparison table\n")
         f.write("\\begin{table}[htbp]\n")
         f.write("    \\centering\n")
-        f.write("    \\caption{Comparative convergence and error performance of MSA, LHNC, and QHNC against Monte Carlo simulations of Patey, Levesque \\& Weis (1979) across all density regimes at $T^* = 1.0$.}\n")
+        f.write("    \\caption{Comparative convergence and error performance of MSA, LHNC, QHNC, and RHNC against Monte Carlo simulations of Patey, Levesque \\& Weis (1979) across all density regimes at $T^* = 1.0$.}\n")
         f.write("    \\label{tab:plw_summary}\n")
         f.write("    \\vspace{2mm}\n")
         f.write("    \\resizebox{\\textwidth}{!}{\n")

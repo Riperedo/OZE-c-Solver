@@ -1,7 +1,7 @@
 % Auto-generated Patey, Levesque & Weis (1979) error comparison table
 \begin{table}[htbp]
     \centering
-    \caption{Comparative convergence and error performance of MSA, LHNC, and QHNC against Monte Carlo simulations of Patey, Levesque \& Weis (1979) across all density regimes at $T^* = 1.0$.}
+    \caption{Comparative convergence and error performance of MSA, LHNC, QHNC, and RHNC against Monte Carlo simulations of Patey, Levesque \& Weis (1979) across all density regimes at $T^* = 1.0$.}
     \label{tab:plw_summary}
     \vspace{2mm}
     \resizebox{\textwidth}{!}{
@@ -10,21 +10,25 @@
         \textbf{State Point} & \textbf{Closure} & \textbf{Phase 1 (Cold)} & \textbf{Phase 2 (Cont.)} & \textbf{Phase 3 (Warm)} & $\text{RMSE}(g^{000})$ & $\text{RMSE}(h^{110})$ & $\text{RMSE}(h^{112})$ \\
         \midrule
         \multicolumn{8}{l}{\textit{rho 0.15 mu2 2.0}: $\rho^* = 0.15, \mu^{*2} = 2.0$} \\
-        $\rho^*=0.15$ & MSA & 13 & 50 & 6 & 0.3395 & 0.1649 & 0.3615 \\
-        $\rho^*=0.15$ & LHNC & 13 & 69 & 7 & 0.3332 & 0.1414 & 0.2702 \\
-        $\rho^*=0.15$ & QHNC & 14 & 79 & 7 & 0.1963 & 0.1116 & 0.1211 \\
+        $\rho^*=0.15$ & MSA & 13 & 49 & 11 & 0.3395 & 0.2323 & 0.3724 \\
+        $\rho^*=0.15$ & LHNC & 11 & 63 & 13 & 0.3332 & 0.2256 & 0.2838 \\
+        $\rho^*=0.15$ & QHNC & 14 & 72 & 15 & 0.2081 & 0.2191 & 0.1526 \\
+        $\rho^*=0.15$ & RHNC & 23 & 125 & 29 & 0.0554 & 0.2242 & 0.2322 \\
         \multicolumn{8}{l}{\textit{rho 0.4 mu2 2.75}: $\rho^* = 0.4, \mu^{*2} = 2.75$} \\
-        $\rho^*=0.4$ & MSA & 37 & 72 & 3 & 0.5614 & 0.3431 & 0.4110 \\
-        $\rho^*=0.4$ & LHNC & 54 & 99 & 7 & 0.5288 & 0.1822 & 0.1955 \\
-        $\rho^*=0.4$ & QHNC & Stalled & 138 & 8 & 0.4263 & 0.1098 & 0.0899 \\
+        $\rho^*=0.4$ & MSA & 18 & 69 & 13 & 0.5614 & 0.4886 & 0.4111 \\
+        $\rho^*=0.4$ & LHNC & 26 & 98 & 20 & 0.5288 & 0.4408 & 0.1944 \\
+        $\rho^*=0.4$ & QHNC & 36 & 139 & 26 & 0.4395 & 0.4271 & 0.1091 \\
+        $\rho^*=0.4$ & RHNC & 68 & 341 & 43 & 0.4648 & 0.4523 & 0.2327 \\
         \multicolumn{8}{l}{\textit{rho 0.6 mu2 2.75}: $\rho^* = 0.6, \mu^{*2} = 2.75$} \\
-        $\rho^*=0.6$ & MSA & 25 & 88 & 3 & 0.1947 & 0.2696 & 0.2954 \\
-        $\rho^*=0.6$ & LHNC & 36 & 123 & 8 & 0.1215 & 0.0963 & 0.0515 \\
-        $\rho^*=0.6$ & QHNC & 63 & 213 & 8 & 0.0667 & 0.1092 & 0.0320 \\
+        $\rho^*=0.6$ & MSA & 36 & 86 & 16 & 0.1947 & 0.4253 & 0.2933 \\
+        $\rho^*=0.6$ & LHNC & 31 & 124 & 30 & 0.1215 & 0.3702 & 0.0924 \\
+        $\rho^*=0.6$ & QHNC & 35 & 237 & 34 & 0.0732 & 0.3694 & 0.0899 \\
+        $\rho^*=0.6$ & RHNC & 115 & 634 & 143 & 0.0837 & 0.3788 & 0.1259 \\
         \multicolumn{8}{l}{\textit{rho 0.8 mu2 2.75}: $\rho^* = 0.8, \mu^{*2} = 2.75$} \\
-        $\rho^*=0.8$ & MSA & 76 & 133 & 3 & 0.7881 & --- & --- \\
-        $\rho^*=0.8$ & LHNC & 123 & 192 & 19 & 0.7628 & --- & --- \\
-        $\rho^*=0.8$ & QHNC & Stalled & Stalled & 53 & 0.7640 & --- & --- \\
+        $\rho^*=0.8$ & MSA & 43 & 97 & 16 & 0.7881 & --- & --- \\
+        $\rho^*=0.8$ & LHNC & 69 & 153 & 32 & 0.7628 & --- & --- \\
+        $\rho^*=0.8$ & QHNC & 46 & 281 & 68 & 0.7665 & --- & --- \\
+        $\rho^*=0.8$ & RHNC & 202 & 926 & Stalled & 0.7761 & --- & --- \\
         \bottomrule
     \end{tabular}
     }

@@ -1,71 +1,97 @@
-# Fundamentos Teóricos - OZE_c_solver
+# Theoretical Foundations - OZE_c_solver
 
-Este documento describe brevemente la física y los métodos numéricos implementados en el solver.
+This document outlines the statistical mechanics, integral equations, rotational invariant expansions, and numerical methods implemented in `OZE_c_solver`.
 
-## 1. Ecuación de Ornstein-Zernike (OZ)
+---
 
-La ecuación integral de Ornstein-Zernike es fundamental en la teoría de líquidos para relacionar la función de correlación directa $c(r)$ con la función de correlación total $h(r) = g(r) - 1$.
+## 1. Isotropic Ornstein-Zernike (OZ) Equation
 
-Para un sistema isotrópico y homogéneo:
+For a homogeneous and isotropic fluid, the Ornstein-Zernike integral equation connects the total correlation function $h(r) = g(r) - 1$ to the direct correlation function $c(r)$:
 
-$$ h(r) = c(r) + \rho \int c(|\mathbf{r} - \mathbf{r}'|) h(r') d\mathbf{r}' $$
+$$h(r) = c(r) + \rho \int c(|\mathbf{r} - \mathbf{r}'|) h(r') d\mathbf{r}'$$
 
-Donde:
-- $h(r)$: Función de correlación total.
-- $c(r)$: Función de correlación directa.
-- $\rho$: Densidad numérica del sistema.
+where $\rho = N/V$ is the number density.
 
-En el espacio de Fourier, esta ecuación se simplifica a una relación algebraica:
+In Fourier space, this convolution reduces to an algebraic relation:
 
-$$ \hat{h}(k) = \hat{c}(k) + \rho \hat{c}(k) \hat{h}(k) $$
+$$\hat{h}(k) = \hat{c}(k) + \rho \hat{c}(k) \hat{h}(k) \implies \hat{h}(k) = \frac{\hat{c}(k)}{1 - \rho \hat{c}(k)}$$
 
-$$ \hat{h}(k) = \frac{\hat{c}(k)}{1 - \rho \hat{c}(k)} $$
+The static structure factor $S(k)$ is defined as:
 
-El factor de estructura estático $S(k)$ se relaciona con $\hat{h}(k)$ mediante:
+$$S(k) = 1 + \rho \hat{h}(k) = \frac{1}{1 - \rho \hat{c}(k)}$$
 
-$$ S(k) = 1 + \rho \hat{h}(k) = \frac{1}{1 - \rho \hat{c}(k)} $$
+### Standard Isotropic Closures
 
-## 2. Relaciones de Cierre
+1. **Hypernetted-Chain (HNC)**:
+   $$c(r) = \exp[-\beta U(r) + \gamma(r)] - \gamma(r) - 1$$
+   where $\gamma(r) = h(r) - c(r)$ is the indirect correlation function.
 
-Para resolver la ecuación OZ, que tiene dos incógnitas ($h$ y $c$), se necesita una ecuación adicional llamada "relación de cierre".
+2. **Rogers-Young (RY)**:
+   $$g(r) = \exp[-\beta U(r)] \left( 1 + \frac{\exp[\gamma(r) f(r)] - 1}{f(r)} \right)$$
+   with mixing function $f(r) = 1 - e^{-\alpha r}$.
 
-### Hypernetted Chain (HNC)
-Aproximación útil para sistemas con interacciones de largo alcance (e.g., Coulomb, Yukawa).
+3. **Percus-Yevick (PY)**:
+   $$c(r) = g(r) [1 - \exp(\beta U(r))]$$
 
-$$ c(r) = \exp[-\beta U(r) + \gamma(r)] - \gamma(r) - 1 $$
+---
 
-Donde $\gamma(r) = h(r) - c(r)$ es la función de correlación indirecta.
+## 2. Non-Spherical & Dipolar Integral Equations
 
-### Rogers-Young (RY)
-Un cierre híbrido que interpola entre Percus-Yevick (PY) y HNC. Es termodinámicamente consistente para esferas duras y potenciales repulsivos suaves.
+For anisotropic molecules with orientations $\Omega_1, \Omega_2$, pair functions are expanded in rotational invariants $\Phi^{l_1 l_2 l}(12)$:
 
-$$ g(r) = \exp[-\beta U(r)] \left( 1 + \frac{\exp[\gamma(r) f(r)] - 1}{f(r)} \right) $$
+$$X(12) = \sum_{l_1 l_2 l} X^{l_1 l_2 l}(r) \Phi^{l_1 l_2 l}(\Omega_1, \Omega_2, \hat{r})$$
 
-Con la función de mezcla:
-$$ f(r) = 1 - e^{-\alpha r} $$
+For dipolar hard spheres (DHS), the primary projections are $(000)$, $(110)$, and $(112)$, representing:
+- $000$: Center-of-mass radial correlations.
+- $110$: Dipolar angular alignment $\mathbf{s}_1 \cdot \mathbf{s}_2$.
+- $112$: Spatial dipole-dipole anisotropy $3(\mathbf{s}_1 \cdot \hat{r})(\mathbf{s}_2 \cdot \hat{r}) - \mathbf{s}_1 \cdot \mathbf{s}_2$.
 
-El parámetro $\alpha$ se ajusta iterativamente para asegurar la consistencia entre la presión virial y la compresibilidad.
+### Decoupled $\chi$-Mode Reciprocal Space Representation (Blum, 1972)
 
-## 3. Método Numérico
+Under Hankel-Bessel transformation $\tilde{F}^{l_1 l_2 l}(k) = 4\pi i^l \int_0^\infty r^2 j_l(kr) F^{l_1 l_2 l}(r) dr$, the coupled angular OZ equation diagonalizes into decoupled scalar algebraic systems:
 
-El solver utiliza el **método de Ng** para acelerar la convergencia de la solución iterativa.
+- **Isotropic channel ($\chi = \text{iso}$)**:
+  $$\tilde{H}^{000}(k) = \frac{\tilde{C}^{000}(k)}{1 - \rho \tilde{C}^{000}(k)}$$
 
-1.  **Inicialización**: Se comienza con una suposición inicial para $\gamma(r)$ (usualmente 0).
-2.  **Iteración de Picard**: Se calcula $c(r)$ usando el cierre, luego se transforma a Fourier para obtener $\hat{c}(k)$, se usa OZ para obtener $\hat{\gamma}(k)$, y se transforma inversamente para obtener un nuevo $\gamma(r)$.
-3.  **Aceleración de Ng**: En lugar de usar simplemente el resultado de la última iteración, el método de Ng utiliza una combinación lineal de las iteraciones anteriores para predecir una solución más cercana a la convergencia, minimizando el residuo.
+- **Dipolar Mode $\chi = 0$**:
+  $$\tilde{C}^0(k) = \tilde{C}^{110}(k) + 2 \tilde{C}^{112}(k) \implies \tilde{H}^0(k) = \frac{\tilde{C}^0(k)}{1 - \frac{\rho}{3} \tilde{C}^0(k)}$$
 
-### Transformada de Fourier
-Se utiliza la Transformada Rápida de Fourier (FFT) para alternar eficientemente entre el espacio real y el recíproco. Debido a la simetría esférica, el problema se reduce a transformadas seno unidimensionales.
+- **Dipolar Mode $\chi = 1$**:
+  $$\tilde{C}^1(k) = \tilde{C}^{110}(k) - \tilde{C}^{112}(k) \implies \tilde{H}^1(k) = \frac{\tilde{C}^1(k)}{1 + \frac{\rho}{3} \tilde{C}^1(k)}$$
 
-## 4. Propiedades Termodinámicas
+---
 
-Una vez obtenidas las funciones de correlación, se calculan propiedades macroscópicas:
+## 3. Non-Spherical Closure Relations
 
-- **Presión Virial ($P_v$)**:
-  $$ \frac{\beta P}{\rho} = 1 - \frac{2\pi\rho}{3} \int_0^\infty r^3 \frac{dU(r)}{dr} g(r) dr $$
+1. **MSA (Mean Spherical Approximation)**:
+   $$c^{000}(r) = c_{\text{HS}}(r), \quad c^{110}(r) = 0, \quad c^{112}(r) = \frac{\beta \mu^2}{r^3} \quad (r > \sigma)$$
 
-- **Compresibilidad Isotérmica ($\chi_T$)**:
-  $$ \rho k_B T \chi_T = S(k \to 0) $$
+2. **LHNC (Linearized HNC)**:
+   Linearizes the angular expansion of $\exp[-\beta u + \eta]$ around the isotropic background.
 
-- **Energía Interna ($U_{int}$)**:
-  $$ \frac{\beta U_{int}}{N} = 2\pi\rho \int_0^\infty r^2 U(r) g(r) dr $$
+3. **QHNC (Quadratic HNC)**:
+   Retains second-order terms via Wigner 9-$j$ angular product couplings.
+
+4. **RHNC (Reference HNC)**:
+   Uses exact radial derivative integration with a Percus-Yevick hard-sphere reference system (see [RHNC.md](RHNC.md)).
+
+---
+
+## 4. Thermodynamic Quantities
+
+- **Virial Pressure ($P_v$)**:
+  $$\frac{\beta P}{\rho} = 1 - \frac{2\pi\rho}{3} \int_0^\infty r^3 \frac{dU(r)}{dr} g(r) dr$$
+
+- **Isothermal Compressibility ($\chi_T$)**:
+  $$\rho k_B T \chi_T = S(k \to 0)$$
+
+- **Internal Energy ($U_{\text{int}}$)**:
+  $$\frac{\beta U_{\text{int}}}{N} = 2\pi\rho \int_0^\infty r^2 U(r) g(r) dr$$
+
+---
+
+## 5. References
+
+- **Hansen, J.-P. & McDonald, I. R.** (2013). *Theory of Simple Liquids*. Academic Press.
+- **Blum, L.** (1972). *The Journal of Chemical Physics*, 57(5), 1862.
+- **Fries, P. H. & Patey, G. N.** (1985). *The Journal of Chemical Physics*, 82(1), 429.

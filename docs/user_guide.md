@@ -1,126 +1,114 @@
-# Guía de Usuario - OZE_c_solver
+# User Guide - OZE_c_solver
 
-Bienvenido a la guía de usuario del solver de la ecuación de Ornstein-Zernike. Este documento explica cómo compilar, ejecutar y configurar el programa para diferentes sistemas coloidales.
+Welcome to the **OZE_c_solver** user guide. This document explains how to build, configure, and execute the solver for both isotropic colloidal models and anisotropic dipolar fluids.
 
-## 1. Instalación y Compilación
+---
 
-### Requisitos Previos
-Asegúrese de tener instalado `gcc` y la librería `GSL` (GNU Scientific Library).
+## 1. Prerequisites and Installation
+
+### Dependencies
+Make sure you have `gcc` and the `GSL` (GNU Scientific Library) development packages installed.
 
 ```bash
-# Ubuntu/Debian
-sudo apt-get install libgsl-dev build-essential
+# Ubuntu / Debian
+sudo apt-get install -y gcc libgsl-dev build-essential
 
-# Fedora
-sudo dnf install gsl-devel
+# Fedora / RHEL
+sudo dnf install -y gcc gsl-devel
+
+# macOS
+brew install gcc gsl
 ```
 
-### Compilación
-Para compilar el proyecto, simplemente ejecute `make` en la raíz del directorio:
-
+### Compilation
+Build the executable by running `make` in the root repository directory:
 ```bash
-make
+make clean && make
+```
+This produces the executable `build/facdes_solver`.
+
+---
+
+## 2. Basic Execution Syntax
+
+The general CLI syntax is:
+```bash
+./build/facdes_solver --closure [CLOSURE] --potential [ID] --volfactor [ETA] --temp [T] --nodes [N] [OPTIONS]
 ```
 
-Esto generará el ejecutable `build/facdes_solver`.
+### Mandatory Arguments
 
-## 2. Ejecución Básica
+| Argument | Description | Example |
+| :--- | :--- | :--- |
+| `--closure` | Closure relation: `HNC`, `RY`, `PY`, `MSA`, `LHNC`, `QHNC`, `RHNC` | `RHNC` |
+| `--potential` | Numeric potential ID (1 to 16) | `14` |
+| `--volfactor` | Packing fraction $\eta = \frac{\pi}{6}\rho\sigma^3$ | `0.418879` |
+| `--temp` | Reduced temperature $T^*$ | `1.0` |
+| `--nodes` | Number of radial discretization points $N$ (powers of 2 recommended) | `4096` |
+| `--knodes` | Number of Fourier space nodes (for spherical outputs) | `1024` |
 
-El programa se ejecuta desde la línea de comandos. La sintaxis general es:
+### Key Optional Flags
 
+| Flag | Description | Default |
+| :--- | :--- | :--- |
+| `--dipole` | Reduced dipole moment $\mu^*$ ($\sqrt{\beta\mu^2/\sigma^3}$, required for potential 14 & 15) | `0.0` |
+| `--rmax` | Spatial domain boundary $r_{\max}/\sigma$ | `15.0` (dipolar) / `10.0` (spherical) |
+| `--ramp` | Enables automatic temperature continuation annealing ramp | Disabled |
+| `--temp-start` | Initial high temperature for annealing continuation | $2 T^*$ |
+| `--temp-steps` | Number of intermediate continuation steps | `10` |
+| `--init-sk` | Analytical or prior structure factor `.dat` file for warm-start | None |
+
+---
+
+## 3. Practical Usage Examples
+
+### Example 1: Dipolar Hard Spheres with RHNC Closure
+Solve the Reference Hypernetted-Chain equation for dipolar hard spheres at $\rho^* = 0.80$ ($\eta \approx 0.418879$), $\mu^{*2} = 2.0$:
 ```bash
-./build/facdes_solver --closure [TIPO] --potential [ID] --volfactor [PHI] --temp [T] --nodes [N] --knodes [Nk]
+./build/facdes_solver --closure RHNC --potential 14 \
+                      --volfactor 0.418879 --temp 1.0 \
+                      --dipole 1.41421356 --nodes 4096 --rmax 30.0
 ```
 
-### Argumentos Obligatorios
-
-| Argumento     | Descripción                                                                             | Ejemplo |
-| :------------ | :-------------------------------------------------------------------------------------- | :------ |
-| `--closure`   | Relación de cierre: `HNC` (Hypernetted Chain) o `RY` (Rogers-Young).                    | `HNC`   |
-| `--potential` | ID numérico del potencial de interacción (ver sección 3).                               | `13`    |
-| `--volfactor` | Fracción de volumen del sistema ($\phi$).                                               | `0.3`   |
-| `--temp`      | Temperatura reducida ($T^*$) o parámetro de energía.                                    | `1.0`   |
-| `--nodes`     | Número de puntos en la malla espacial (espacio real $r$). Se recomienda potencias de 2. | `4096`  |
-| `--knodes`    | Número de puntos en el espacio recíproco ($k$) para el archivo de salida.               | `1024`  |
-
-### Argumentos Opcionales
-
-| Argumento    | Descripción                                                        | Default |
-| :----------- | :----------------------------------------------------------------- | :------ |
-| `--temp2`    | Segunda temperatura o parámetro de ancho para ciertos potenciales. | `1.0`   |
-| `--lambda_a` | Parámetro de alcance atractivo o exponente.                        | `0.0`   |
-| `--lambda_r` | Parámetro de alcance repulsivo.                                    | `0.0`   |
-
-## 3. Catálogo de Potenciales
-
-A continuación se detallan los potenciales disponibles y sus parámetros específicos.
-
-### 1. Inverse Power Law (IPL)
-$$ U(r) = \epsilon (\sigma/r)^\lambda $$
-- **ID**: `1`
-- **Parámetros**:
-    - `--temp`: $\epsilon$ (Energía)
-    - `--lambda_a`: $\lambda$ (Exponente)
-
-### 2. Lennard-Jones Truncado (Repulsivo)
-Solo la parte repulsiva del potencial LJ (WCA).
-- **ID**: `2`
-- **Parámetros**:
-    - `--temp`: Temperatura reducida $T^*$
-
-### 4. Double Yukawa
-Combinación de una parte atractiva y una repulsiva.
-$$ U(r) = -K_a \frac{e^{-\lambda_a r}}{r} + K_r \frac{e^{-\lambda_r r}}{r} $$
-- **ID**: `4`
-- **Parámetros**:
-    - `--temp`: Inverso de la intensidad atractiva ($1/K_a$)
-    - `--temp2`: Inverso de la intensidad repulsiva ($1/K_r$)
-    - `--lambda_a`: Alcance atractivo $\lambda_a$
-    - `--lambda_r`: Alcance repulsivo $\lambda_r$
-
-### 7. Hard Sphere (Esferas Duras)
-- **ID**: `7`
-- **Parámetros**:
-    - `--temp`: Valor dummy (no afecta física, usar 1.0)
-
-### 13. Hertzian Potential
-Modelo de esferas blandas elásticas.
-$$ U(r) = \epsilon (1 - r/\sigma)^{5/2} \quad \text{si } r < \sigma $$
-- **ID**: `13`
-- **Parámetros**:
-    - `--temp`: Energía $\epsilon$
-
-*(Para ver la lista completa, ejecute `./build/facdes_solver` sin argumentos)*
-
-## 4. Archivos de Salida
-
-Los resultados se guardan en la carpeta `output/`.
-
-- **`HNC_SdeK.dat`** / **`RY_SdeK.dat`**: Factor de estructura estático $S(k)$.
-    - Columna 1: Vector de onda $k$
-    - Columna 2: $S(k)$
-- **`HNC_GdeR.dat`** / **`RY_GdeR.dat`**: Función de distribución radial $g(r)$.
-    - Columna 1: Distancia $r$
-    - Columna 2: $g(r)$
-
-## 5. Ejemplos Prácticos
-
-### Ejemplo 1: Esferas Duras (Hard Spheres)
-Simulación de un líquido de esferas duras a densidad media.
-
+### Example 2: High Dipole State via Continuation Ramping
+At strong dipole moments ($\mu^{*2} = 2.75$), direct Picard iteration may fail from cold start. Use the continuation ramp:
 ```bash
-./build/facdes_solver --closure PY --potential 7 --volfactor 0.4 --temp 1.0 --nodes 2048 --knodes 512
-```
-*(Nota: El código usa HNC o RY, para HS puro RY suele ser mejor o equivalente a PY si alpha se ajusta)*
-
-### Ejemplo 2: Potencial Hertziano
-Simulación de coloides blandos.
-
-```bash
-./build/facdes_solver --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024
+./build/facdes_solver --closure RHNC --potential 14 \
+                      --volfactor 0.418879 --temp 1.0 \
+                      --dipole 1.6583124 --nodes 4096 --rmax 30.0 \
+                      --ramp --temp-start 5.0 --temp-steps 15
 ```
 
-### Visualización Rápida con Gnuplot
+### Example 3: Spherical Hertzian Soft Spheres
 ```bash
-gnuplot -e "plot 'output/HNC_SdeK.dat' w l title 'S(k)'; pause -1"
+./build/facdes_solver --closure HNC --potential 13 \
+                      --volfactor 0.3 --temp 1.0 \
+                      --nodes 4096 --knodes 1024
+```
+
+---
+
+## 4. Output Files
+
+All calculation results are written to the `output/` directory:
+
+- **Dipolar Systems (Potential 14)**:
+  - `output/sk_dipolar_000.dat`, `sk_dipolar_110.dat`, `sk_dipolar_112.dat`: Structure factors $S^{000}(k), S^{110}(k), S^{112}(k)$.
+  - `output/gr_dipolar_000.dat`, `gr_dipolar_110.dat`, `gr_dipolar_112.dat`: Pair distributions $g^{000}(r), h^{110}(r), h^{112}(r)$.
+  - `output/cr_dipolar_000.dat`, `cr_dipolar_110.dat`, `cr_dipolar_112.dat`: Direct correlation functions $c^{000}(r), c^{110}(r), c^{112}(r)$.
+
+- **Isotropic Systems**:
+  - `output/HNC_SdeK.dat` / `output/RY_SdeK.dat`: Static structure factor $S(k)$.
+  - `output/HNC_GdeR.dat` / `output/RY_GdeR.dat`: Radial distribution function $g(r)$.
+
+---
+
+## 5. Automated Verification & Reports
+
+You can run automated test targets via `make`:
+
+```bash
+make test-all       # Run spherical and non-spherical test suites
+make mc-all         # Run full Monte Carlo benchmark pipeline and compile report
+make benchmark-all  # Run Wertheim analytical MSA benchmark pipeline
 ```

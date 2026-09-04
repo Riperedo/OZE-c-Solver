@@ -37,8 +37,11 @@ STYLES = {
     "MC": {"color": "black", "marker": "o", "ls": "none", "label": "Monte Carlo (Fries & Patey 1985)"},
     "MSA": {"color": "#1f77b4", "ls": "--", "label": "MSA"},
     "LHNC": {"color": "#2ca02c", "ls": "-.", "label": "LHNC"},
-    "QHNC": {"color": "#d62728", "ls": "-", "label": "QHNC"}
+    "QHNC": {"color": "#d62728", "ls": "-", "label": "QHNC"},
+    "RHNC": {"color": "#9467bd", "ls": ":", "label": "RHNC"}
 }
+
+CLOSURES = ["MSA", "LHNC", "QHNC", "RHNC"]
 
 def load_theory_data(state_tag, closure):
     path = os.path.join(DATA_DIR, f"solution_{state_tag}_{closure}.dat")
@@ -72,12 +75,13 @@ def plot_fig1():
     ax2.plot(mc_1b[:,0], mc_1b[:,1], STYLES["MC"]["marker"], color=STYLES["MC"]["color"], 
              label=STYLES["MC"]["label"], markeredgecolor='black', markerfacecolor='black', markersize=6)
     
-    for cl in ["MSA", "LHNC", "QHNC"]:
+    for cl in CLOSURES:
         th = load_theory_data("rho_0.8_mu2_2.75", cl)
         if th is not None:
             mask = th["r"] >= 1.0
-            ax1.plot(th["r"][mask], th["g000"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"])
-            ax2.plot(th["r"][mask], th["g000"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"])
+            lw = 2.3 if cl == "RHNC" else 2.0
+            ax1.plot(th["r"][mask], th["g000"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"], linewidth=lw)
+            ax2.plot(th["r"][mask], th["g000"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"], linewidth=lw)
             
     ax1.set_xlim(1.0, 1.6)
     ax1.set_ylim(0.0, 5.5)
@@ -116,12 +120,13 @@ def plot_fig2():
     ax2.plot(mc_2b[:,0], mc_2b[:,1], STYLES["MC"]["marker"], color=STYLES["MC"]["color"], 
              label=STYLES["MC"]["label"], markeredgecolor='black', markerfacecolor='black', markersize=6)
     
-    for cl in ["MSA", "LHNC", "QHNC"]:
+    for cl in CLOSURES:
         th = load_theory_data("rho_0.8_mu2_2.0", cl)
         if th is not None:
             mask = th["r"] >= 1.0
-            ax1.plot(th["r"][mask], th["g000"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"])
-            ax2.plot(th["r"][mask], th["g000"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"])
+            lw = 2.3 if cl == "RHNC" else 2.0
+            ax1.plot(th["r"][mask], th["g000"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"], linewidth=lw)
+            ax2.plot(th["r"][mask], th["g000"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"], linewidth=lw)
             
     ax1.set_xlim(1.0, 1.6)
     ax1.set_ylim(0.0, 5.0)
@@ -153,11 +158,12 @@ def plot_fig3():
     plt.plot(mc_3[:,0], mc_3[:,1], STYLES["MC"]["marker"], color=STYLES["MC"]["color"], 
              label=STYLES["MC"]["label"], markeredgecolor='black', markerfacecolor='black', markersize=6)
     
-    for cl in ["MSA", "LHNC", "QHNC"]:
+    for cl in CLOSURES:
         th = load_theory_data("rho_0.8_mu2_2.0", cl)
         if th is not None:
             mask = th["r"] >= 1.0
-            plt.plot(th["r"][mask], th["h110"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"])
+            lw = 2.3 if cl == "RHNC" else 2.0
+            plt.plot(th["r"][mask], th["h110"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"], linewidth=lw)
 
     plt.xlim(1.0, 4.0)
     plt.ylim(-0.5, 3.5)
@@ -179,11 +185,12 @@ def plot_fig4():
     plt.plot(mc_4[:,0], mc_4[:,1], STYLES["MC"]["marker"], color=STYLES["MC"]["color"], 
              label=STYLES["MC"]["label"], markeredgecolor='black', markerfacecolor='black', markersize=6)
     
-    for cl in ["MSA", "LHNC", "QHNC"]:
+    for cl in CLOSURES:
         th = load_theory_data("rho_0.8_mu2_2.0", cl)
         if th is not None:
             mask = th["r"] >= 1.0
-            plt.plot(th["r"][mask], th["h112"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"])
+            lw = 2.3 if cl == "RHNC" else 2.0
+            plt.plot(th["r"][mask], th["h112"][mask], ls=STYLES[cl]["ls"], color=STYLES[cl]["color"], label=STYLES[cl]["label"], linewidth=lw)
 
     plt.xlim(1.0, 4.0)
     plt.ylim(-0.5, 4.5)
@@ -198,25 +205,51 @@ def plot_fig4():
     plt.close()
     print("✓ Generated Fig 4: fig4_h112_mu2_2.0")
 
+def parse_mc_summary():
+    summary_file = os.path.join(DATA_DIR, "mc_benchmark_summary.dat")
+    if not os.path.exists(summary_file):
+        return None
+    data = {}
+    with open(summary_file) as f:
+        for line in f:
+            if line.startswith("#") or not line.strip():
+                continue
+            parts = line.strip().split()
+            tag = parts[0]
+            cl = parts[1]
+            data[(tag, cl)] = {
+                "status": parts[2],
+                "p1_iters": int(parts[3]) if parts[3] != "Stalled" else 210,
+                "p2_iters": int(parts[4]) if parts[4] != "Stalled" else 210,
+                "p3_iters": int(parts[5]) if parts[5] != "Stalled" else 210,
+                "rmse_contact": float(parts[6]),
+                "rmse_med": float(parts[7]),
+                "rmse_110": float(parts[8]) if len(parts) > 8 and parts[8] != "---" else 0.0,
+                "rmse_112": float(parts[9]) if len(parts) > 9 and parts[9] != "---" else 0.0
+            }
+    return data
+
 def plot_fig5():
     """Fig 5: Comprehensive Error Metric Bar Chart across Closures."""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5))
+    summary_data = parse_mc_summary()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5))
     
-    closures = ["MSA", "LHNC", "QHNC"]
-    colors = [STYLES[c]["color"] for c in closures]
+    colors = [STYLES[c]["color"] for c in CLOSURES]
+    n_cl = len(CLOSURES)
+    width = 0.8 / n_cl
     
     # State 1: mu2 = 2.75
-    rmse_1_contact = [0.8121, 0.0987, 0.0576]
-    rmse_1_med = [0.0367, 0.0246, 0.0238]
-    
-    x = np.arange(2)
-    width = 0.25
-    
-    ax1.bar(x - width, [rmse_1_contact[0], rmse_1_med[0]], width, label="MSA", color=colors[0], alpha=0.85, edgecolor='black')
-    ax1.bar(x, [rmse_1_contact[1], rmse_1_med[1]], width, label="LHNC", color=colors[1], alpha=0.85, edgecolor='black')
-    ax1.bar(x + width, [rmse_1_contact[2], rmse_1_med[2]], width, label="QHNC", color=colors[2], alpha=0.85, edgecolor='black')
-    
-    ax1.set_xticks(x)
+    x1 = np.arange(2)
+    for i, cl in enumerate(CLOSURES):
+        if summary_data and ("rho_0.8_mu2_2.75", cl) in summary_data:
+            c_val = summary_data[("rho_0.8_mu2_2.75", cl)]["rmse_contact"]
+            m_val = summary_data[("rho_0.8_mu2_2.75", cl)]["rmse_med"]
+        else:
+            c_val, m_val = 0.1, 0.02
+        pos = x1 + (i - (n_cl - 1) / 2.0) * width
+        ax1.bar(pos, [c_val, m_val], width, label=cl, color=colors[i], alpha=0.85, edgecolor='black')
+        
+    ax1.set_xticks(x1)
     ax1.set_xticklabels([r"$g^{000}_{\mathrm{contact}}$ ($r \leq 1.6\sigma$)", r"$g^{000}_{\mathrm{medium}}$ ($r \leq 4.0\sigma$)"])
     ax1.set_ylabel("RMSE vs. Monte Carlo")
     ax1.set_title(r"(a) State 1: $\rho^* = 0.8, \mu^{*2} = 2.75$ ($T^* = 0.3636$)")
@@ -225,16 +258,16 @@ def plot_fig5():
     ax1.legend(loc="upper right")
 
     # State 2: mu2 = 2.0
-    rmse_2_contact = [0.5235, 0.0876, 0.0586]
-    rmse_2_med = [0.0715, 0.0248, 0.0236]
-    rmse_2_110 = [0.3693, 0.1051, 0.1042]
-    rmse_2_112 = [0.3800, 0.1709, 0.1731]
-
     x2 = np.arange(4)
-    ax2.bar(x2 - width, [rmse_2_contact[0], rmse_2_med[0], rmse_2_110[0], rmse_2_112[0]], width, label="MSA", color=colors[0], alpha=0.85, edgecolor='black')
-    ax2.bar(x2, [rmse_2_contact[1], rmse_2_med[1], rmse_2_110[1], rmse_2_112[1]], width, label="LHNC", color=colors[1], alpha=0.85, edgecolor='black')
-    ax2.bar(x2 + width, [rmse_2_contact[2], rmse_2_med[2], rmse_2_110[2], rmse_2_112[2]], width, label="QHNC", color=colors[2], alpha=0.85, edgecolor='black')
-    
+    for i, cl in enumerate(CLOSURES):
+        if summary_data and ("rho_0.8_mu2_2.0", cl) in summary_data:
+            d = summary_data[("rho_0.8_mu2_2.0", cl)]
+            vals = [d["rmse_contact"], d["rmse_med"], d["rmse_110"], d["rmse_112"]]
+        else:
+            vals = [0.1, 0.02, 0.1, 0.1]
+        pos = x2 + (i - (n_cl - 1) / 2.0) * width
+        ax2.bar(pos, vals, width, label=cl, color=colors[i], alpha=0.85, edgecolor='black')
+        
     ax2.set_xticks(x2)
     ax2.set_xticklabels([r"$g^{000}_{\mathrm{cont}}$", r"$g^{000}_{\mathrm{med}}$", r"$h^{110}$", r"$h^{112}$"])
     ax2.set_ylabel("RMSE vs. Monte Carlo")
@@ -243,7 +276,7 @@ def plot_fig5():
     ax2.grid(True, which="both", linestyle=":", alpha=0.6)
     ax2.legend(loc="upper right")
 
-    plt.suptitle("Comparative Accuracy of MSA, LHNC, and QHNC against Monte Carlo Benchmarks", fontsize=14, y=1.02)
+    plt.suptitle("Comparative Accuracy of MSA, LHNC, QHNC, and RHNC against Monte Carlo Benchmarks", fontsize=14, y=1.02)
     plt.tight_layout()
     plt.savefig(os.path.join(PLOTS_DIR, "fig5_error_comparison.pdf"))
     plt.savefig(os.path.join(PLOTS_DIR, "fig5_error_comparison.png"))
@@ -252,20 +285,24 @@ def plot_fig5():
 
 def plot_fig6():
     """Fig 6: Convergence Iteration Progression across Phases."""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    summary_data = parse_mc_summary()
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
     
     phases = ["Phase 1\n(Cold Start)", "Phase 2\n(Continuation)", "Phase 3\n(Warm-Start)"]
     x = np.arange(len(phases))
-    width = 0.25
+    n_cl = len(CLOSURES)
+    width = 0.8 / n_cl
+    colors = [STYLES[c]["color"] for c in CLOSURES]
 
-    # State 1: mu2 = 2.75 iters
-    iters_1_msa = [65, 19, 22]
-    iters_1_lhnc = [157, 67, 1]
-    iters_1_qhnc = [210, 89, 110] # 210 represents stalled
-
-    ax1.bar(x - width, iters_1_msa, width, label="MSA", color=STYLES["MSA"]["color"], alpha=0.85, edgecolor='black')
-    ax1.bar(x, iters_1_lhnc, width, label="LHNC", color=STYLES["LHNC"]["color"], alpha=0.85, edgecolor='black')
-    ax1.bar(x + width, iters_1_qhnc, width, label="QHNC", color=STYLES["QHNC"]["color"], alpha=0.85, edgecolor='black')
+    # State 1
+    for i, cl in enumerate(CLOSURES):
+        if summary_data and ("rho_0.8_mu2_2.75", cl) in summary_data:
+            d = summary_data[("rho_0.8_mu2_2.75", cl)]
+            iters = [d["p1_iters"], d["p2_iters"], d["p3_iters"]]
+        else:
+            iters = [100, 50, 20]
+        pos = x + (i - (n_cl - 1) / 2.0) * width
+        ax1.bar(pos, iters, width, label=cl, color=colors[i], alpha=0.85, edgecolor='black')
 
     ax1.set_xticks(x)
     ax1.set_xticklabels(phases)
@@ -274,14 +311,15 @@ def plot_fig6():
     ax1.grid(True, linestyle=":", alpha=0.6)
     ax1.legend(loc="upper right")
 
-    # State 2: mu2 = 2.0 iters
-    iters_2_msa = [101, 52, 15]
-    iters_2_lhnc = [130, 45, 1]
-    iters_2_qhnc = [210, 61, 75]
-
-    ax2.bar(x - width, iters_2_msa, width, label="MSA", color=STYLES["MSA"]["color"], alpha=0.85, edgecolor='black')
-    ax2.bar(x, iters_2_lhnc, width, label="LHNC", color=STYLES["LHNC"]["color"], alpha=0.85, edgecolor='black')
-    ax2.bar(x + width, iters_2_qhnc, width, label="QHNC", color=STYLES["QHNC"]["color"], alpha=0.85, edgecolor='black')
+    # State 2
+    for i, cl in enumerate(CLOSURES):
+        if summary_data and ("rho_0.8_mu2_2.0", cl) in summary_data:
+            d = summary_data[("rho_0.8_mu2_2.0", cl)]
+            iters = [d["p1_iters"], d["p2_iters"], d["p3_iters"]]
+        else:
+            iters = [100, 50, 20]
+        pos = x + (i - (n_cl - 1) / 2.0) * width
+        ax2.bar(pos, iters, width, label=cl, color=colors[i], alpha=0.85, edgecolor='black')
 
     ax2.set_xticks(x)
     ax2.set_xticklabels(phases)

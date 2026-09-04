@@ -1,7 +1,7 @@
 % Auto-generated Monte Carlo error comparison table
 \begin{table}[htbp]
     \centering
-    \caption{Comparative convergence and error performance of MSA, LHNC, and QHNC against Monte Carlo simulations (Fries \& Patey 1985) across all three evaluation phases at $\rho^* = 0.8$.}
+    \caption{Comparative convergence and error performance of MSA, LHNC, QHNC, and RHNC against Monte Carlo simulations (Fries \& Patey 1985) across all three evaluation phases at $\rho^* = 0.8$.}
     \label{tab:mc_summary}
     \vspace{2mm}
     \begin{tabular}{ccccccccc}
@@ -9,14 +9,16 @@
         State & Closure & Phase 1 & Phase 2 & Phase 3 & $\text{RMSE}(g_{\text{cont}}^{000})$ & $\text{RMSE}(g_{\text{med}}^{000})$ & $\text{RMSE}(h^{110})$ & $\text{RMSE}(h^{112})$ \\
         \hline
         \multicolumn{9}{l}{\textbf{State 1: } $\rho^* = 0.8, \mu^{*2} = 2.75, T^* = 0.3636$} \\
-        $\mu^{*2}=2.75$ & MSA & 65 & 19 & 31 & 0.8121 & 0.0367 & --- & --- \\
-        $\mu^{*2}=2.75$ & LHNC & 157 & 61 & 11 & 0.6883 & 0.0316 & --- & --- \\
-        $\mu^{*2}=2.75$ & QHNC & 210 & 162 & 141 & 0.7147 & 0.0333 & --- & --- \\
+        $\mu^{*2}=2.75$ & MSA & 37 & 13 & 43 & 0.8121 & 0.0367 & --- & --- \\
+        $\mu^{*2}=2.75$ & LHNC & 75 & 30 & 28 & 0.6883 & 0.0316 & --- & --- \\
+        $\mu^{*2}=2.75$ & QHNC & 68 & 54 & 56 & 0.7043 & 0.0350 & --- & --- \\
+        $\mu^{*2}=2.75$ & RHNC & 188 & 173 & 195 & 0.7938 & 0.0307 & --- & --- \\
         \hline
         \multicolumn{9}{l}{\textbf{State 2: } $\rho^* = 0.8, \mu^{*2} = 2.00, T^* = 0.5000$} \\
-        $\mu^{*2}=2.00$ & MSA & 101 & 52 & 30 & 0.9460 & 0.1015 & 1.1432 & 0.7825 \\
-        $\mu^{*2}=2.00$ & LHNC & 130 & 31 & 2 & 0.9452 & 0.0293 & 0.4116 & 0.5221 \\
-        $\mu^{*2}=2.00$ & QHNC & 210 & 88 & 79 & 0.9638 & 0.0358 & 0.4272 & 0.5268 \\
+        $\mu^{*2}=2.00$ & MSA & 56 & 11 & 36 & 0.9460 & 0.1015 & 0.7993 & 0.8079 \\
+        $\mu^{*2}=2.00$ & LHNC & 49 & 34 & 26 & 0.9452 & 0.0293 & 0.6451 & 0.5524 \\
+        $\mu^{*2}=2.00$ & QHNC & 66 & 33 & 49 & 0.9599 & 0.0336 & 0.6406 & 0.5610 \\
+        $\mu^{*2}=2.00$ & RHNC & 165 & 108 & 513 & 0.9500 & 0.0690 & 0.7504 & 0.7285 \\
         \hline\hline
     \end{tabular}
 \end{table}

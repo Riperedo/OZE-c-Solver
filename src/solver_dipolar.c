@@ -10,7 +10,10 @@
 void closure_MSA_dipolar(double **c, double **eta, double *r, int n_points, double beta_mu2, double sigma);
 void closure_LHNC_dipolar(double **c, double **h, double **eta, double *r, int n_points, double beta_mu2, double sigma);
 void closure_QHNC_dipolar(double **c, double **h, double **eta, double *r, int n_points, double beta_mu2, double sigma);
-void closure_RHNC_dipolar(double **c, double **h, double **eta, double *r, int n_points, double beta_mu2, double sigma, double *c_HS, double *h_HS);
+void closure_RHNC_dipolar(double **c, double **h, double **eta, double *r, int n_points, 
+                          double beta_mu2, double sigma, 
+                          const double *c_HS, const double *h_HS, 
+                          const double *d_ln_g_HS, const double *d_eta_HS);
 
 /**
  * @brief Solves a small linear system A * x = b of dimension n (n <= 6)
@@ -199,7 +202,7 @@ void solve_oz_k_space(double **C_k, double **H_k, int nodes, double rho) {
         double C1 = C110 - C112;         // chi=1: f^1 = f^{110} - f^{112}
 
         double denom0 = 1.0 - (rho / 3.0) * C0;
-        double denom1 = 1.0 - (rho / 3.0) * C1; // Consistent with analytical MSA convention
+        double denom1 = 1.0 + (rho / 3.0) * C1;
 
         double H0 = (fabs(denom0) > 1e-12) ? C0 / denom0 : 0.0;
         double H1 = (fabs(denom1) > 1e-12) ? C1 / denom1 : 0.0;
@@ -211,19 +214,20 @@ void solve_oz_k_space(double **C_k, double **H_k, int nodes, double rho) {
 }
 
 /**
- * @brief Computes the exact Percus-Yevick Hard Sphere reference functions.
+ * @brief Computes the exact Percus-Yevick Hard Sphere reference functions and their radial derivatives.
  */
-void compute_HS_reference(double *c_HS, double *h_HS, double *r, double *k, 
+void compute_HS_reference(double *c_HS, double *h_HS, double *d_ln_g_HS, double *d_eta_HS,
+                          double *r, double *k, 
                           int nodes, double dr, double rho, double sigma,
                           const double *K0_fwd, const double *K0_inv) {
     double eta_vol = rho * M_PI * pow(sigma, 3) / 6.0;
-    double lambda1 = pow(1.0 + 2.0*eta_vol, 2) / pow(1.0 - eta_vol, 4);
-    double lambda2 = -pow(1.0 + 0.5*eta_vol, 2) / pow(1.0 - eta_vol, 4);
+    double lambda1 = pow(1.0 + 2.0 * eta_vol, 2) / pow(1.0 - eta_vol, 4);
+    double lambda2 = -pow(1.0 + 0.5 * eta_vol, 2) / pow(1.0 - eta_vol, 4);
 
     // 1. Exact PY c(r)
     for (int i = 0; i < nodes; i++) {
         if (r[i] < sigma) {
-            c_HS[i] = -lambda1 - 6.0*eta_vol*lambda2*r[i] - 0.5*eta_vol*lambda1*pow(r[i], 3);
+            c_HS[i] = -lambda1 - 6.0 * eta_vol * lambda2 * r[i] - 0.5 * eta_vol * lambda1 * pow(r[i], 3);
         } else {
             c_HS[i] = 0.0;
         }
@@ -257,9 +261,35 @@ void compute_HS_reference(double *c_HS, double *h_HS, double *r, double *k,
         h_HS[i] = sum;
     }
 
+    // 5. Compute reference log(g_HS) and eta_HS and their radial derivatives
+    double *ln_g_HS = malloc(nodes * sizeof(double));
+    double *eta_HS = malloc(nodes * sizeof(double));
+    for (int i = 0; i < nodes; i++) {
+        double g_val = h_HS[i] + 1.0;
+        if (g_val < 1e-12) g_val = 1e-12;
+        ln_g_HS[i] = log(g_val);
+        eta_HS[i] = h_HS[i] - c_HS[i];
+    }
+
+    for (int i = 0; i < nodes; i++) {
+        if (i == 0) {
+            d_ln_g_HS[i] = (ln_g_HS[1] - ln_g_HS[0]) / dr;
+            d_eta_HS[i] = (eta_HS[1] - eta_HS[0]) / dr;
+        } else if (i == nodes - 1) {
+            d_ln_g_HS[i] = (ln_g_HS[nodes - 1] - ln_g_HS[nodes - 2]) / dr;
+            d_eta_HS[i] = (eta_HS[nodes - 1] - eta_HS[nodes - 2]) / dr;
+        } else {
+            d_ln_g_HS[i] = (ln_g_HS[i + 1] - ln_g_HS[i - 1]) / (2.0 * dr);
+            d_eta_HS[i] = (eta_HS[i + 1] - eta_HS[i - 1]) / (2.0 * dr);
+        }
+    }
+
     free(C_k);
     free(H_k);
+    free(ln_g_HS);
+    free(eta_HS);
 }
+
 
 /**
  * @brief Main solver function for Dipolar Hard Spheres.
@@ -321,10 +351,14 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
     // Hard Sphere Reference for RHNC
     double *c_HS = NULL;
     double *h_HS = NULL;
+    double *d_ln_g_HS = NULL;
+    double *d_eta_HS = NULL;
     if (closureID == 3) {
         c_HS = malloc(nodes * sizeof(double));
         h_HS = malloc(nodes * sizeof(double));
-        compute_HS_reference(c_HS, h_HS, r, k, nodes, dr, rho, sigma, K0_fwd, K0_inv);
+        d_ln_g_HS = malloc(nodes * sizeof(double));
+        d_eta_HS = malloc(nodes * sizeof(double));
+        compute_HS_reference(c_HS, h_HS, d_ln_g_HS, d_eta_HS, r, k, nodes, dr, rho, sigma, K0_fwd, K0_inv);
     }
 
     // Determine Temperature Continuation Schedule
@@ -438,7 +472,15 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
                 free(S110_in);
                 free(S112_in);
             } else {
-                closure_MSA_dipolar(c->data, eta->data, r, nodes, beta_mu2, sigma);
+                if (closureID == 3) {
+                    for (int i = 0; i < nodes; i++) {
+                        c->data[0][i] = c_HS[i];
+                        c->data[1][i] = 0.0;
+                        c->data[2][i] = (r[i] > sigma) ? (beta_mu2 / pow(r[i], 3.0)) : 0.0;
+                    }
+                } else {
+                    closure_MSA_dipolar(c->data, eta->data, r, nodes, beta_mu2, sigma);
+                }
             }
         } else {
             // Update dipole tail outside core for the new temperature (only for MSA)
@@ -451,13 +493,12 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
             }
         }
 
-
-        double alpha = (current_T < 0.3) ? 0.2 : 0.4; // Adaptive Anderson/Picard damping factor
+        double alpha = (closureID == 3) ? 0.15 : ((current_T < 0.3) ? 0.2 : 0.4); // Adaptive Anderson/Picard damping factor
         int hist_count = 0;
         int iter = 0;
         double error = 1.0;
         double stage_tol = (stage < num_stages - 1) ? 1e-4 : tolerance;
-        int max_iter_stage = (stage < num_stages - 1) ? 300 : 600;
+        int max_iter_stage = (stage < num_stages - 1) ? 300 : 800;
 
         while (iter < max_iter_stage && error > stage_tol) {
             
@@ -519,7 +560,7 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
             } else if (closureID == 2) {
                 closure_QHNC_dipolar(c_new_mat->data, h->data, eta->data, r, nodes, beta_mu2, sigma);
             } else if (closureID == 3) {
-                closure_RHNC_dipolar(c_new_mat->data, h->data, eta->data, r, nodes, beta_mu2, sigma, c_HS, h_HS);
+                closure_RHNC_dipolar(c_new_mat->data, h->data, eta->data, r, nodes, beta_mu2, sigma, c_HS, h_HS, d_ln_g_HS, d_eta_HS);
             }
 
             // F. Compute L2 residual error d = c_new - c
@@ -761,7 +802,7 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
             double C1 = C110 - C112;         // chi=1 mode
 
             double denom0 = 1.0 - (rho / 3.0) * C0;
-            double denom1 = 1.0 - (rho / 3.0) * C1;
+            double denom1 = 1.0 + (rho / 3.0) * C1;
 
             double S0 = (fabs(denom0) > 1e-12) ? 1.0 / denom0 : 1e12;
             double S1 = (fabs(denom1) > 1e-12) ? 1.0 / denom1 : 1e12;
@@ -791,4 +832,6 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
     free(K2_inv);
     if (c_HS) free(c_HS);
     if (h_HS) free(h_HS);
+    if (d_ln_g_HS) free(d_ln_g_HS);
+    if (d_eta_HS) free(d_eta_HS);
 }

@@ -12,268 +12,284 @@ void solver_mode2_core(int closureID, double temp, double rho, double dipole_mom
                    int nodes, double rmax, const char *output_dir);
 
 // =========================================================
-// Función para Desplegar las Opciones de Potencial
+// Function to Display the Catalog of Potential Options
 // =========================================================
 void display_potential_options() {
     printf("\n");
     printf("=========================================================================\n");
-    printf("                  CATÁLOGO DE OPCIONES DE POTENCIALES\n");
+    printf("                  POTENTIAL INTERACTION CATALOG\n");
     printf("=========================================================================\n");
-    printf(" Caso | Nombre del Potencial      | Ecuación o Forma Característica\n");
+    printf(" Case | Potential Name            | Characteristic Equation / Form\n");
     printf("------|---------------------------|---------------------------------------\n");
     printf("  1   | INVERSE POWER LAW (IPL)   | U = T* (sigma/r)^(lambda)\n");
-    printf("  2   | TRUNCATED LENNARD-JONES   | Repulsivo (LJ Truncado en el minimo)\n");
-    printf("  3   | TRUNCATED LENNARD-JONES 2 | LJ con minimo en r=sigma\n");
-    printf("  4   | DOUBLE YUKAWA             | Atractivo + Repulsivo\n");
-    printf("  5   | ATRACTIVE YUKAWA          | U = -T* exp[-lambda (r-1)]/r\n");
+    printf("  2   | TRUNCATED LENNARD-JONES   | Repulsive (LJ truncated at minimum)\n");
+    printf("  3   | TRUNCATED LENNARD-JONES 2 | LJ with minimum shifted to r = sigma\n");
+    printf("  4   | DOUBLE YUKAWA             | Attractive + Repulsive\n");
+    printf("  5   | ATTRACTIVE YUKAWA         | U = -T* exp[-lambda (r-1)]/r\n");
     printf("  6   | REPULSIVE YUKAWA          | U = T* exp[-lambda (r-1)]/r\n");
-    printf("  7   | HARD SPHERE (HS)          | U = 0 (r > sigma)\n");
-    printf("  8   | SHOULDER FUNCTION         | Potencial tipo 'Hombro' (Step Potencial)\n");
-    printf("  9   | DOWN-HILL FUNCTION        | Potencial lineal decreciente\n");
+    printf("  7   | HARD SPHERE (HS)          | U = infinity (r < sigma), 0 (r > sigma)\n");
+    printf("  8   | SHOULDER FUNCTION         | Square shoulder / step potential\n");
+    printf("  9   | DOWN-HILL FUNCTION        | Linearly decreasing repulsive potential\n");
     printf("  10  | GAUSSIAN CORE MODEL       | U = T* exp(- (r/sigma)^2 )\n");
-    printf("  11  | RAMP (STEP FUNCTION)      | U lineal decreciente (tipo rampa)\n");
-    printf("  12  | STEP FUNCTION (Soft Core) | U = E * (1 - r/sigma)^n (similar a Hertzian, pero se asume Step Function)\n");
-    printf("  12  | STEP FUNCTION (Soft Core) | U = E * (1 - r/sigma)^n (similar a Hertzian, pero se asume Step Function)\n");
+    printf("  11  | RAMP (STEP FUNCTION)      | Linearly decreasing ramp potential\n");
+    printf("  12  | STEP FUNCTION (Soft Core) | U = E * (1 - r/sigma)^n\n");
     printf("  13  | HERTZIAN POTENTIAL (n=2.5)| U = E * (1 - r/sigma)^2.5 (r < sigma)\n");
-    printf("  14  | DIPOLAR HARD SPHERES      | Hard Spheres + Point Dipole (Non-Spherical)\n");
+    printf("  14  | DIPOLAR HARD SPHERES      | Hard Spheres + Point Dipole (MSA/LHNC/QHNC/RHNC)\n");
+    printf("  15  | DHS EXTENDED (Modes 2)    | Coupled higher rotational invariants (m,n <= 2)\n");
     printf("  16  | SOFT SHOULDER POTENTIAL   | U = 0.5 * E * (1 - tanh(alpha * (r - lambda)))\n");
     printf("-------------------------------------------------------------------------\n");
     printf("\n");
-    printf("Ejemplo de uso: ./facdes_solver --closure HNC --potential 13 ...\n\n");
+    printf("Example usage: ./build/facdes_solver --closure HNC --potential 13 ...\n\n");
 }
 
-// Definición de una función auxiliar para imprimir el uso correcto del programa
+// Definition of helper function to print usage instructions
 void print_usage(const char *prog_name) {
-    fprintf(stderr, "\nUso: %s [OPCION] [VALOR] ...\n\n", prog_name);
-    fprintf(stderr, "Calcula el factor de estructura S(k) para un sistema coloidal.\n\n");
-    fprintf(stderr, "Opciones requeridas:\n");
-    fprintf(stderr, "  --closure   <HNC|RY|PY>    Cierre termodinámico (HNC, RY, o PY).\n");
-    fprintf(stderr, "  --potential <int>          ID del potencial de interacción (e.g., 1, 2, ...).\n");
-    fprintf(stderr, "  --volfactor <double>       Factor de volumen (e.g., 0.1, 0.5).\n");
-    fprintf(stderr, "  --temp      <double>       Temperatura T (e.g., 1.0).\n");
-    fprintf(stderr, "  --nodes     <int>          Número de nodos internos para el cálculo (nodesFacdes2Y).\n");
-    fprintf(stderr, "  --knodes    <int>          Número de nodos para el vector k de salida (k->size).\n");
-    fprintf(stderr, "\nOpciones opcionales:\n");
-    fprintf(stderr, "  --temp2     <double>       Segunda temperatura T2 (e.g., 1.0, por defecto 1.0).\n");
-    fprintf(stderr, "  --lambda_a  <double>       Parámetro lambda_a (e.g., 0.1, por defecto 0.0).\n");
-    fprintf(stderr, "  --lambda_r  <double>       Parámetro lambda_r (e.g., 0.1, por defecto 0.0).\n");
-    fprintf(stderr, "  --dipole    <double>       Momento dipolar mu (para potencial 14 y 15).\n");
-    fprintf(stderr, "  --rmax      <double>       Radio espacial máximo r_max (por defecto 15.0 para dipolos / 10.0 esférico).\n");
-    fprintf(stderr, "  --temp-start <double>      Temperatura inicial de rampa (continuation method).\n");
-    fprintf(stderr, "  --temp-steps <int>         Número de pasos en la rampa de temperatura (defecto 10).\n");
-    fprintf(stderr, "  --ramp                     Activa rampa geométrica automática de temperatura.\n");
-    fprintf(stderr, "  --init-sk   <string>       Archivo .dat con factores de estructura analíticos (k, S000, S110, S112).\n");
-    fprintf(stderr, "\nEjemplo:\n");
-    fprintf(stderr, "  %s --closure HNC --potential 7 --volfactor 0.2 --temp 1.0 --nodes 2048 --knodes 1024\n\n", prog_name);
+    fprintf(stderr, "\nUsage: %s [OPTION] [VALUE] ...\n\n", prog_name);
+    fprintf(stderr, "Solves the Ornstein-Zernike Equation to calculate structure factor S(k) and radial distribution g(r).\n\n");
+    fprintf(stderr, "Required options:\n");
+    fprintf(stderr, "  --closure   <HNC|RY|PY|MSA|LHNC|QHNC|RHNC>  Thermodynamic closure relation.\n");
+    fprintf(stderr, "  --potential <int>                           Interaction potential ID (1 to 16).\n");
+    fprintf(stderr, "  --volfactor <double>                        Packing fraction / volume factor eta (e.g. 0.1, 0.4).\n");
+    fprintf(stderr, "  --temp      <double>                        Reduced temperature T* (e.g. 1.0).\n");
+    fprintf(stderr, "  --nodes     <int>                           Internal radial discretization nodes (e.g. 2048, 4096).\n");
+    fprintf(stderr, "  --knodes    <int>                           Number of Fourier k-space nodes for isotropic output.\n");
+    fprintf(stderr, "\nOptional parameters:\n");
+    fprintf(stderr, "  --temp2     <double>       Secondary temperature T2* (default: 1.0).\n");
+    fprintf(stderr, "  --lambda_a  <double>       Attractive range parameter (default: 0.0).\n");
+    fprintf(stderr, "  --lambda_r  <double>       Repulsive range parameter (default: 0.0).\n");
+    fprintf(stderr, "  --dipole    <double>       Reduced dipole moment mu* (required for potentials 14 and 15).\n");
+    fprintf(stderr, "  --rmax      <double>       Maximum radial domain cutoff r_max (default: 15.0 for dipoles / 10.0 for spherical).\n");
+    fprintf(stderr, "  --temp-start <double>      Initial high temperature for continuation annealing ramp.\n");
+    fprintf(stderr, "  --temp-steps <int>         Number of intermediate continuation stages (default: 10).\n");
+    fprintf(stderr, "  --ramp                     Enable automated geometric temperature continuation ramp.\n");
+    fprintf(stderr, "  --init-sk   <string>       Input .dat file with analytical/prior structure factors (k, S000, S110, S112) for warm-start.\n");
+    fprintf(stderr, "\nExamples:\n");
+    fprintf(stderr, "  Spherical (Hertzian):  %s --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024\n", prog_name);
+    fprintf(stderr, "  Dipolar (RHNC):        %s --closure RHNC --potential 14 --volfactor 0.418879 --temp 1.0 --dipole 1.6583 --nodes 4096 --rmax 30.0\n\n", prog_name);
 }
 
-// Función para imprimir ayuda específica según el potencial seleccionado
+// Helper function to print detailed parameter guidance per potential ID
 void print_potential_help(int potentialID) {
     printf("\n");
     printf("=========================================================================\n");
-    printf("                  AYUDA ESPECÍFICA PARA EL POTENCIAL ID: %d\n", potentialID);
+    printf("                  DETAILED HELP FOR POTENTIAL ID: %d\n", potentialID);
     printf("=========================================================================\n");
 
     switch (potentialID) {
         case 1: // INVERSE POWER LAW (IPL)
-            printf("Potencial: INVERSE POWER LAW (IPL)\n");
-            printf("Ecuación: U = T* (sigma/r)^(lambda)\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T*\n");
-            printf("  --lambda_a  <double> : Exponente lambda (repulsivo)\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 1 --volfactor 0.2 --temp 1.0 --lambda_a 12.0 --nodes 4096 --knodes 1024\n");
+            printf("Potential: INVERSE POWER LAW (IPL)\n");
+            printf("Equation: U = T* (sigma/r)^(lambda)\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T*\n");
+            printf("  --lambda_a  <double> : Repulsive exponent lambda\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 1 --volfactor 0.2 --temp 1.0 --lambda_a 12.0 --nodes 4096 --knodes 1024\n");
             break;
 
         case 2: // TRUNCATED LENNARD-JONES
         case 3: // TRUNCATED LENNARD-JONES 2
-            printf("Potencial: TRUNCATED LENNARD-JONES (Tipo 1 o 2)\n");
-            printf("Ecuación: Lennard-Jones truncado/desplazado\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T*\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 2 --volfactor 0.25 --temp 1.0 --nodes 4096 --knodes 1024\n");
+            printf("Potential: TRUNCATED LENNARD-JONES (Type 1 or 2)\n");
+            printf("Equation: Truncated/shifted Lennard-Jones\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T*\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 2 --volfactor 0.25 --temp 1.0 --nodes 4096 --knodes 1024\n");
             break;
 
         case 4: // DOUBLE YUKAWA
-            printf("Potencial: DOUBLE YUKAWA\n");
-            printf("Ecuación: Atractivo + Repulsivo\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T* (Atractiva)\n");
-            printf("  --temp2     <double> : Temperatura T2* (Repulsiva)\n");
-            printf("  --lambda_a  <double> : Lambda atractivo\n");
-            printf("  --lambda_r  <double> : Lambda repulsivo\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 4 --volfactor 0.2 --temp 1.0 --temp2 0.5 --lambda_a 1.8 --lambda_r 5.0 --nodes 4096 --knodes 1024\n");
+            printf("Potential: DOUBLE YUKAWA\n");
+            printf("Equation: Attractive + Repulsive Yukawa\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Attractive temperature T*\n");
+            printf("  --temp2     <double> : Repulsive temperature T2*\n");
+            printf("  --lambda_a  <double> : Attractive screening parameter\n");
+            printf("  --lambda_r  <double> : Repulsive screening parameter\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 4 --volfactor 0.2 --temp 1.0 --temp2 0.5 --lambda_a 1.8 --lambda_r 5.0 --nodes 4096 --knodes 1024\n");
             break;
 
-        case 5: // ATRACTIVE YUKAWA
-            printf("Potencial: YUKAWA Atractivo\n");
-            printf("Ecuación: U ~ exp(-lambda r)/r\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T*\n");
-            printf("  --lambda_a  <double> : Lambda\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 5 --volfactor 0.2 --temp 1.0 --lambda_a 1.8 --nodes 4096 --knodes 1024\n");
+        case 5: // ATTRACTIVE YUKAWA
+            printf("Potential: ATTRACTIVE YUKAWA\n");
+            printf("Equation: U ~ exp(-lambda r)/r\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T*\n");
+            printf("  --lambda_a  <double> : Screening parameter lambda\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 5 --volfactor 0.2 --temp 1.0 --lambda_a 1.8 --nodes 4096 --knodes 1024\n");
+            break;
         case 6: // REPULSIVE YUKAWA
-            printf("Potencial: YUKAWA Repulsivo\n");
-            printf("Ecuación: U ~ exp(-lambda r)/r\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T*\n");
-            printf("  --lambda_a  <double> : Lambda\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 6 --volfactor 0.2 --temp 1.0 --lambda_a 1.8 --nodes 4096 --knodes 1024\n");
+            printf("Potential: REPULSIVE YUKAWA\n");
+            printf("Equation: U ~ exp(-lambda r)/r\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T*\n");
+            printf("  --lambda_a  <double> : Screening parameter lambda\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 6 --volfactor 0.2 --temp 1.0 --lambda_a 1.8 --nodes 4096 --knodes 1024\n");
             break;
 
         case 7: // HARD SPHERE (HS)
-            printf("Potencial: HARD SPHERE (HS)\n");
-            printf("Ecuación: U = infinito si r < sigma, 0 si r > sigma\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Nota: La temperatura no afecta la estructura de HS puros, pero se requiere un valor dummy (e.g. 1.0).\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 7 --volfactor 0.4 --temp 1.0 --nodes 4096 --knodes 1024\n");
+            printf("Potential: HARD SPHERE (HS)\n");
+            printf("Equation: U = infinity (r < sigma), 0 (r > sigma)\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Note: Temperature does not alter pure HS structure, but a dummy value (e.g. 1.0) is passed.\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 7 --volfactor 0.4 --temp 1.0 --nodes 4096 --knodes 1024\n");
             break;
 
         case 8: // SHOULDER FUNCTION
-            printf("Potencial: SHOULDER FUNCTION (Step Potential)\n");
-            printf("Ecuación: U = T* lambda   para sigma < r < T2\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T*\n");
-            printf("  --lambda_a  <double> : Altura del escalón (lambda)\n");
-            printf("  --temp2     <double> : Ancho del escalón (T2)\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 8 --volfactor 0.3 --temp 1.0 --lambda_a 0.5 --temp2 1.5 --nodes 4096 --knodes 1024\n");
+            printf("Potential: SHOULDER FUNCTION (Step Potential)\n");
+            printf("Equation: U = T* lambda for sigma < r < T2\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T*\n");
+            printf("  --lambda_a  <double> : Step height (lambda)\n");
+            printf("  --temp2     <double> : Step width (T2)\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 8 --volfactor 0.3 --temp 1.0 --lambda_a 0.5 --temp2 1.5 --nodes 4096 --knodes 1024\n");
             break;
 
         case 9: // DOWN-HILL FUNCTION
-            printf("Potencial: DOWN-HILL FUNCTION\n");
-            printf("Ecuación: U lineal decreciente\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T*\n");
-            printf("  --lambda_a  <double> : Altura (lambda)\n");
-            printf("  --temp2     <double> : Ancho (T2)\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 9 --volfactor 0.3 --temp 1.0 --lambda_a 0.5 --temp2 1.5 --nodes 4096 --knodes 1024\n");
+            printf("Potential: DOWN-HILL FUNCTION\n");
+            printf("Equation: Linearly decreasing repulsive potential\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T*\n");
+            printf("  --lambda_a  <double> : Height (lambda)\n");
+            printf("  --temp2     <double> : Width (T2)\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 9 --volfactor 0.3 --temp 1.0 --lambda_a 0.5 --temp2 1.5 --nodes 4096 --knodes 1024\n");
             break;
 
         case 10: // GAUSSIAN CORE MODEL
-            printf("Potencial: GAUSSIAN CORE MODEL\n");
-            printf("Ecuación: U = T* exp(- (r/sigma)^2 )\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T*\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 10 --volfactor 0.5 --temp 1.0 --nodes 4096 --knodes 1024\n");
+            printf("Potential: GAUSSIAN CORE MODEL\n");
+            printf("Equation: U = T* exp(- (r/sigma)^2 )\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T*\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 10 --volfactor 0.5 --temp 1.0 --nodes 4096 --knodes 1024\n");
             break;
 
         case 11: // RAMP (STEP FUNCTION)
-            printf("Potencial: RAMP (STEP FUNCTION)\n");
-            printf("Ecuación: U lineal decreciente (tipo rampa)\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T*\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 11 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024\n");
+            printf("Potential: RAMP (STEP FUNCTION)\n");
+            printf("Equation: Linearly decreasing ramp\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T*\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 11 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024\n");
             break;
 
         case 12: // STEP FUNCTION (Soft Core)
-            printf("Potencial: STEP FUNCTION (Soft Core)\n");
-            printf("Ecuación: U = E * (1 - r/sigma)^n\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T* (E)\n");
-            printf("  --lambda_a  <double> : Exponente n (lambda)\n");
-            printf("  --temp2     <double> : Ancho (T2)\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 12 --volfactor 0.3 --temp 1.0 --lambda_a 2.0 --temp2 1.5 --nodes 4096 --knodes 1024\n");
+            printf("Potential: STEP FUNCTION (Soft Core)\n");
+            printf("Equation: U = E * (1 - r/sigma)^n\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T* (E)\n");
+            printf("  --lambda_a  <double> : Exponent n\n");
+            printf("  --temp2     <double> : Width (T2)\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 12 --volfactor 0.3 --temp 1.0 --lambda_a 2.0 --temp2 1.5 --nodes 4096 --knodes 1024\n");
             break;
 
         case 13: // HERTZIAN POTENTIAL
-            printf("Potencial: HERTZIAN POTENTIAL (n=2.5)\n");
-            printf("Ecuación: U = E * (1 - r/sigma)^2.5 (r < sigma)\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Pre-factor de energía E (o T*)\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024\n");
+            printf("Potential: HERTZIAN POTENTIAL (n=2.5)\n");
+            printf("Equation: U = E * (1 - r/sigma)^2.5 (r < sigma)\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Energy prefactor E (or T*)\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024\n");
             break;
 
         case 14: // DIPOLAR HARD SPHERES
-            printf("Potencial: DIPOLAR HARD SPHERES\n");
-            printf("Ecuación: Hard Spheres + Dipolo puntual\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Temperatura T*\n");
-            printf("  --dipole    <double> : Momento dipolar mu\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure MSA --potential 14 --volfactor 0.3 --temp 1.0 --dipole 2.0 --nodes 1024 --knodes 512\n");
+            printf("Potential: DIPOLAR HARD SPHERES\n");
+            printf("Equation: Hard Spheres + Point Dipole Interaction\n");
+            printf("Supported closures: MSA, LHNC, QHNC, RHNC\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction eta = (pi/6)*rho*sigma^3\n");
+            printf("  --temp      <double> : Reduced temperature T*\n");
+            printf("  --dipole    <double> : Dipole moment mu*\n");
+            printf("  --nodes     <int>    : Real-space nodes (e.g. 4096)\n");
+            printf("Optional flags: --rmax, --ramp, --temp-start, --temp-steps, --init-sk\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure RHNC --potential 14 --volfactor 0.418879 --temp 1.0 --dipole 1.6583 --nodes 4096 --rmax 30.0\n");
+            break;
+
+        case 15: // DHS EXTENDED (Modes 2)
+            printf("Potential: DHS EXTENDED (Modes 2)\n");
+            printf("Equation: Coupled higher rotational invariants (m,n <= 2)\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Temperature T*\n");
+            printf("  --dipole    <double> : Dipole moment mu*\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure LHNC --potential 15 --volfactor 0.3 --temp 1.0 --dipole 1.5 --nodes 2048\n");
             break;
 
         case 16: // SOFT SHOULDER POTENTIAL
-            printf("Potencial: SOFT SHOULDER POTENTIAL\n");
-            printf("Ecuación: U = 0.5 * E * (1 - tanh(alpha * (r - lambda)))\n");
-            printf("Parámetros REQUERIDOS:\n");
-            printf("  --volfactor <double> : Factor de volumen\n");
-            printf("  --temp      <double> : Escala de energía E (o T*)\n");
-            printf("  --lambda_a  <double> : Alcance del potencial (lambda)\n");
-            printf("  --lambda_r  <double> : Suavidad del hombro (alpha)\n");
-            printf("  --nodes     <int>    : Nodos espaciales\n");
-            printf("  --knodes    <int>    : Nodos en espacio k\n");
-            printf("Ejemplo: \n");
-            printf("./facdes_solver --closure HNC --potential 16 --volfactor 0.2 --temp 1.0 --lambda_a 2.0 --lambda_r 5.0 --nodes 2048 --knodes 1024\n");
+            printf("Potential: SOFT SHOULDER POTENTIAL\n");
+            printf("Equation: U = 0.5 * E * (1 - tanh(alpha * (r - lambda)))\n");
+            printf("Required arguments:\n");
+            printf("  --volfactor <double> : Packing fraction\n");
+            printf("  --temp      <double> : Energy scale E (or T*)\n");
+            printf("  --lambda_a  <double> : Potential range (lambda)\n");
+            printf("  --lambda_r  <double> : Shoulder steepness (alpha)\n");
+            printf("  --nodes     <int>    : Real-space nodes\n");
+            printf("  --knodes    <int>    : k-space nodes\n");
+            printf("Example:\n");
+            printf("./build/facdes_solver --closure HNC --potential 16 --volfactor 0.2 --temp 1.0 --lambda_a 2.0 --lambda_r 5.0 --nodes 2048 --knodes 1024\n");
             break;
 
         default:
-            printf("Potencial ID %d no tiene ayuda específica detallada aún.\n", potentialID);
-            printf("Revise la lista general de potenciales.\n");
-            printf("Parámetros típicamente requeridos: --volfactor, --temp, --nodes, --knodes.\n");
+            printf("Potential ID %d does not have detailed help documentation yet.\n", potentialID);
+            printf("Please review the general potential catalog.\n");
+            printf("Typically required parameters: --volfactor, --temp, --nodes, --knodes.\n");
             break;
     }
     printf("=========================================================================\n\n");
 }
 
 int main(int argc, char *argv[]) {
-    // Si el usuario no proporciona argumentos, muestra el uso y las opciones.
+    // If user provides no arguments, show usage and options.
     if (argc < 2) {
-        printf("Uso: %s --closure [HNC/PY/RY] --potential [ID] --volfactor [...] ...\n", argv[0]);
+        printf("Usage: %s --closure [HNC|RY|PY|MSA|LHNC|QHNC|RHNC] --potential [ID] --volfactor [...] ...\n", argv[0]);
         display_potential_options(); 
         return 1;
     }
 
-    // Valores predeterminados y variables de entrada
+    // Default values and input variables
     char *closure_str = NULL;
     int potentialNumber = -1;
     double volumeFactor = -1.0;
@@ -281,7 +297,7 @@ int main(int argc, char *argv[]) {
     int nodesFacdes2Y = -1;
     int k_nodes = -1;
     
-    // Valores opcionales
+    // Optional values
     double Temperature2 = 1.0;
     double lambda_a = 0.0;
     double lambda_r = 0.0;
@@ -292,7 +308,7 @@ int main(int argc, char *argv[]) {
     int use_ramp = 0;         // Flag for automatic temperature ramping
     const char *init_sk_file = NULL; // Analytical structure factor input file
     
-    // Parseo de argumentos de línea de comandos
+    // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--closure") == 0 && i + 1 < argc) {
             closure_str = argv[++i];
@@ -328,31 +344,36 @@ int main(int argc, char *argv[]) {
             print_usage(argv[0]);
             return EXIT_SUCCESS;
         } else {
-            fprintf(stderr, "Error: Opción desconocida o incompleta: %s\n", argv[i]);
+            fprintf(stderr, "Error: Unknown or incomplete option: %s\n", argv[i]);
             print_usage(argv[0]);
             return EXIT_FAILURE;
         }
     }
 
-    // Validación de argumentos requeridos
+    // For dipolar systems (potential 14 and 15), knodes defaults to nodesFacdes2Y
+    if ((potentialNumber == 14 || potentialNumber == 15) && k_nodes == -1) {
+        k_nodes = nodesFacdes2Y;
+    }
+
+    // Validation of required arguments
     if (closure_str == NULL || potentialNumber == -1 || volumeFactor == -1.0 || 
         Temperature == -1.0 || nodesFacdes2Y == -1 || k_nodes == -1) {
         
-        // Si tenemos un ID de potencial pero faltan otros argumentos, mostramos la ayuda específica
+        // If potential ID is provided but other arguments are missing, show specific help
         if (potentialNumber != -1) {
             print_potential_help(potentialNumber);
             return EXIT_FAILURE;
         }
 
-        fprintf(stderr, "Error: Faltan argumentos requeridos.\n");
+        fprintf(stderr, "Error: Missing required arguments.\n");
         print_usage(argv[0]);
         return EXIT_FAILURE;
     }
     
-    // Check for Dipolar Solver
+    // Check for Dipolar Solver (Potential 14)
     if (potentialNumber == 14) {
         if (dipole_moment <= 0.0) {
-            fprintf(stderr, "Error: Para potencial 14, --dipole debe ser > 0.\n");
+            fprintf(stderr, "Error: For potential 14, --dipole must be > 0.\n");
             return EXIT_FAILURE;
         }
 
@@ -363,7 +384,7 @@ int main(int argc, char *argv[]) {
         else if (strcmp(closure_str, "HNC") == 0) closure_id_int = 1; // Fallback to LHNC for "HNC" input
         else if (strcmp(closure_str, "MSA") == 0 || strcmp(closure_str, "0") == 0) closure_id_int = 0;
         else if (strcmp(closure_str, "RY") == 0) {
-             fprintf(stderr, "Warning: RY no esta implementado para Dipolar aun. Usando LHNC.\n");
+             fprintf(stderr, "Warning: RY is not implemented for Dipolar fluids yet. Using LHNC.\n");
              closure_id_int = 1;
         }
 
@@ -376,21 +397,21 @@ int main(int argc, char *argv[]) {
         // For hard spheres, eta = (pi/6) * rho * sigma^3. With sigma=1, rho = 6 * eta / pi.
         double rho = 6.0 * volumeFactor / M_PI;
 
-        // Call the new solver with temperature continuation support and optional analytical S(k) init
+        // Call the non-spherical dipolar solver with temperature continuation and analytical S(k) init support
         solver_dipolar(closure_id_int, Temperature, rho, dipole_moment, nodesFacdes2Y, rmax_val, "output", temp_start, temp_steps, init_sk_file);
         return EXIT_SUCCESS;
     }
 
-    // Check for Extended Modes 2 Solver
+    // Check for Extended Modes 2 Solver (Potential 15)
     if (potentialNumber == 15) {
         if (dipole_moment <= 0.0) {
-            fprintf(stderr, "Error: Para potencial 15, --dipole debe ser > 0.\n");
+            fprintf(stderr, "Error: For potential 15, --dipole must be > 0.\n");
             return EXIT_FAILURE;
         }
 
         int closure_id_int = 0; // Default MSA
         if (strcmp(closure_str, "LHNC") == 0) closure_id_int = 1;
-        else if (strcmp(closure_str, "QHNC") == 0) closure_id_int = 2; // Defaulting QHNC to LHNC internally for now or leaving to fallback
+        else if (strcmp(closure_str, "QHNC") == 0) closure_id_int = 2;
         else if (strcmp(closure_str, "HNC") == 0) closure_id_int = 1; 
         else if (strcmp(closure_str, "MSA") == 0) closure_id_int = 0;
         
@@ -400,36 +421,35 @@ int main(int argc, char *argv[]) {
     }
 
     if (strcmp(closure_str, "HNC") != 0 && strcmp(closure_str, "RY") != 0 && strcmp(closure_str, "PY") != 0) {
-        fprintf(stderr, "Error: Cierre ('%s') no válido. Use 'HNC', 'RY' o 'PY'.\n", closure_str);
+        fprintf(stderr, "Error: Invalid closure ('%s'). Use 'HNC', 'RY', or 'PY'.\n", closure_str);
         return EXIT_FAILURE;
     }
 
-    // Preparación del vector k (espacio de Fourier)
+    // Allocation of k-space vector (Fourier space)
     gsl_vector *k_vec = gsl_vector_alloc(k_nodes);
     if (k_vec == NULL) {
-        fprintf(stderr, "Error de asignación de memoria para gsl_vector k.\n");
+        fprintf(stderr, "Memory allocation error for gsl_vector k.\n");
         return EXIT_FAILURE;
     }
     
-    // Preparación del vector r (espacio real)
+    // Allocation of real-space r vector
     gsl_vector *r_vec = gsl_vector_alloc(k_nodes);
     if (r_vec == NULL) {
-        fprintf(stderr, "Error de asignación de memoria para gsl_vector r.\n");
+        fprintf(stderr, "Memory allocation error for gsl_vector r.\n");
         gsl_vector_free(k_vec);
         return EXIT_FAILURE;
     }
     
-    // Inicialización simple de k: valores espaciados uniformemente
-    // Desde un k_min pequeño (para evitar la singularidad en 0) hasta un k_max.
+    // Linear discretization of k grid
     double k_max = 10.0; 
-    double k_min = k_max / (double)k_nodes; // Valor pequeño > 0
+    double k_min = k_max / (double)k_nodes;
     double dk = (k_max - k_min) / (double)(k_nodes - 1);
     
     for (int i = 0; i < k_nodes; i++) {
         gsl_vector_set(k_vec, i, k_min + i * dk);
     }
     
-    // Inicialización del vector r (espacio real)
+    // Linear discretization of r grid
     double r_min = 0.01;
     double r_max = 10.0;
     double dr = (r_max - r_min) / (double)(k_nodes - 1);
@@ -438,58 +458,57 @@ int main(int argc, char *argv[]) {
         gsl_vector_set(r_vec, i, r_min + i * dr);
     }
     
-    // Vector de salida para S(k)
+    // Output array for S(k)
     double *sk_output = malloc(k_nodes * sizeof(double));
     if (sk_output == NULL) {
-        fprintf(stderr, "Error de asignación de memoria para sk_output.\n");
+        fprintf(stderr, "Memory allocation error for sk_output.\n");
         gsl_vector_free(k_vec);
         gsl_vector_free(r_vec);
         return EXIT_FAILURE;
     }
     
-    // Vector de salida para g(r)
+    // Output array for g(r)
     double *gr_output = malloc(k_nodes * sizeof(double));
     if (gr_output == NULL) {
-        fprintf(stderr, "Error de asignación de memoria para gr_output.\n");
+        fprintf(stderr, "Memory allocation error for gr_output.\n");
         gsl_vector_free(k_vec);
         gsl_vector_free(r_vec);
         free(sk_output);
         return EXIT_FAILURE;
     }
 
-    printf("Iniciando cálculo...\n");
-    printf("Cierre: %s, Potencial: %d, phi: %.4f, T: %.4f, N_calc: %d, N_k: %d\n", 
+    printf("Starting calculation...\n");
+    printf("Closure: %s, Potential: %d, phi: %.4f, T*: %.4f, N_nodes: %d, N_k: %d\n", 
            closure_str, potentialNumber, volumeFactor, Temperature, nodesFacdes2Y, k_nodes);
 
-    // Llamada a las funciones correspondientes
+    // Dispatch to corresponding calculation functions
     if (strcmp(closure_str, "HNC") == 0) {
-        printf("\n# Calculando S(k)...\n");
+        printf("\n# Calculating S(k)...\n");
         sk_HNC(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
                k_vec, sk_output, potentialNumber, nodesFacdes2Y);
         
-        printf("\n# Calculando g(r)...\n");
+        printf("\n# Calculating g(r)...\n");
         gr_HNC(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
                r_vec, gr_output, potentialNumber, nodesFacdes2Y);
     } else if (strcmp(closure_str, "PY") == 0) {
-        printf("\n# Calculando S(k)...\n");
+        printf("\n# Calculating S(k)...\n");
         sk_PY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
                k_vec, sk_output, potentialNumber, nodesFacdes2Y);
         
-        printf("\n# Calculando g(r)...\n");
+        printf("\n# Calculating g(r)...\n");
         gr_PY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
                r_vec, gr_output, potentialNumber, nodesFacdes2Y);
-    } else { // Cierre "RY"
-        printf("\n# Calculando S(k)...\n");
+    } else { // "RY" Closure
+        printf("\n# Calculating S(k)...\n");
         sk_RY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
-              k_vec, sk_output, potentialNumber, nodesFacdes2Y);
+               k_vec, sk_output, potentialNumber, nodesFacdes2Y);
         
-        printf("\n# Calculando g(r)...\n");
+        printf("\n# Calculating g(r)...\n");
         gr_RY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
-              r_vec, gr_output, potentialNumber, nodesFacdes2Y);
+               r_vec, gr_output, potentialNumber, nodesFacdes2Y);
     }
 
-    
-    // Liberar memoria
+    // Free memory
     free(sk_output);
     free(gr_output);
     gsl_vector_free(k_vec);

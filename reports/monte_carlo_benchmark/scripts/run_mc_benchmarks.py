@@ -46,7 +46,7 @@ STATES = {
     }
 }
 
-CLOSURES = ["MSA", "LHNC", "QHNC"]
+CLOSURES = ["MSA", "LHNC", "QHNC", "RHNC"]
 
 def run_solver(closure, temp, phi, use_ramp=False, temp_start=10.0, temp_steps=15, init_sk=None):
     """Executes the C solver with specified arguments."""
@@ -253,19 +253,20 @@ def main():
         f.write("% Auto-generated Monte Carlo error comparison table\n")
         f.write("\\begin{table}[htbp]\n")
         f.write("    \\centering\n")
-        f.write("    \\caption{Comparative convergence and error performance of MSA, LHNC, and QHNC against Monte Carlo simulations (Fries \\& Patey 1985) across all three evaluation phases at $\\rho^* = 0.8$.}\n")
+        f.write("    \\caption{Comparative convergence and error performance of MSA, LHNC, QHNC, and RHNC against Monte Carlo simulations (Fries \\& Patey 1985) across all three evaluation phases at $\\rho^* = 0.8$.}\n")
         f.write("    \\label{tab:mc_summary}\n")
         f.write("    \\vspace{2mm}\n")
         f.write("    \\begin{tabular}{ccccccccc}\n")
         f.write("        \\hline\\hline\n")
         f.write("        State & Closure & Phase 1 & Phase 2 & Phase 3 & $\\text{RMSE}(g_{\\text{cont}}^{000})$ & $\\text{RMSE}(g_{\\text{med}}^{000})$ & $\\text{RMSE}(h^{110})$ & $\\text{RMSE}(h^{112})$ \\\\\n")
         f.write("        \\hline\n")
+        n_cl = len(CLOSURES)
         f.write("        \\multicolumn{9}{l}{\\textbf{State 1: } $\\rho^* = 0.8, \\mu^{*2} = 2.75, T^* = 0.3636$} \\\\\n")
-        for row in mc_table_tex[3:]:
+        for row in mc_table_tex[n_cl:]:
             f.write("        " + row + "\n")
         f.write("        \\hline\n")
         f.write("        \\multicolumn{9}{l}{\\textbf{State 2: } $\\rho^* = 0.8, \\mu^{*2} = 2.00, T^* = 0.5000$} \\\\\n")
-        for row in mc_table_tex[:3]:
+        for row in mc_table_tex[:n_cl]:
             f.write("        " + row + "\n")
         f.write("        \\hline\\hline\n")
         f.write("    \\end{tabular}\n")

@@ -35,6 +35,7 @@ C_MC = '#111111'     # Black circles for Monte Carlo
 C_MSA = '#D9534F'    # Crimson Red (dashed)
 C_LHNC = '#F0AD4E'   # Amber / Orange (dash-dot)
 C_QHNC = '#0275D8'   # Cobalt Blue (solid)
+C_RHNC = '#9467BD'   # Purple (dotted)
 
 def load_sol(state_key, closure):
     fpath = os.path.join(DATA_DIR, f"solution_plw_{state_key}_{closure}.dat")
@@ -58,6 +59,7 @@ def plot_single_g000(state_key, mc_filename, fig_num_plw, rho_val, mu2_val, out_
     sol_msa = load_sol(state_key, "MSA")
     sol_lhnc = load_sol(state_key, "LHNC")
     sol_qhnc = load_sol(state_key, "QHNC")
+    sol_rhnc = load_sol(state_key, "RHNC")
 
     if sol_msa:
         mask = (sol_msa["r"] >= 1.0) & (sol_msa["r"] <= xlim[1] + 0.5)
@@ -70,6 +72,10 @@ def plot_single_g000(state_key, mc_filename, fig_num_plw, rho_val, mu2_val, out_
     if sol_qhnc:
         mask = (sol_qhnc["r"] >= 1.0) & (sol_qhnc["r"] <= xlim[1] + 0.5)
         ax.plot(sol_qhnc["r"][mask], sol_qhnc["g000"][mask], color=C_QHNC, linestyle='-', linewidth=2.0, label='QHNC')
+
+    if sol_rhnc:
+        mask = (sol_rhnc["r"] >= 1.0) & (sol_rhnc["r"] <= xlim[1] + 0.5)
+        ax.plot(sol_rhnc["r"][mask], sol_rhnc["g000"][mask], color=C_RHNC, linestyle=':', linewidth=2.2, label='RHNC')
 
     ax.set_xlabel(r'$r / \sigma$', fontweight='bold')
     ax.set_ylabel(r'$g^{000}(r)$', fontweight='bold')
@@ -110,6 +116,7 @@ def plot_angular_projections_plw():
         sol_msa = load_sol(d["key"], "MSA")
         sol_lhnc = load_sol(d["key"], "LHNC")
         sol_qhnc = load_sol(d["key"], "QHNC")
+        sol_rhnc = load_sol(d["key"], "RHNC")
 
         if sol_msa:
             mask = (sol_msa["r"] >= 1.0) & (sol_msa["r"] <= 4.0)
@@ -125,6 +132,11 @@ def plot_angular_projections_plw():
             mask = (sol_qhnc["r"] >= 1.0) & (sol_qhnc["r"] <= 4.0)
             ax_top.plot(sol_qhnc["r"][mask], sol_qhnc["h110"][mask], color=C_QHNC, linestyle='-', linewidth=2.0, label='QHNC')
             ax_bot.plot(sol_qhnc["r"][mask], sol_qhnc["h112"][mask], color=C_QHNC, linestyle='-', linewidth=2.0, label='QHNC')
+
+        if sol_rhnc:
+            mask = (sol_rhnc["r"] >= 1.0) & (sol_rhnc["r"] <= 4.0)
+            ax_top.plot(sol_rhnc["r"][mask], sol_rhnc["h110"][mask], color=C_RHNC, linestyle=':', linewidth=2.2, label='RHNC')
+            ax_bot.plot(sol_rhnc["r"][mask], sol_rhnc["h112"][mask], color=C_RHNC, linestyle=':', linewidth=2.2, label='RHNC')
 
         # Bottom row: h112(r)
         mc_112 = os.path.join(PLW_MC_DIR, d["h112_mc"])
@@ -180,6 +192,7 @@ def plot_g000_density_progression():
         sol_msa = load_sol(p["key"], "MSA")
         sol_lhnc = load_sol(p["key"], "LHNC")
         sol_qhnc = load_sol(p["key"], "QHNC")
+        sol_rhnc = load_sol(p["key"], "RHNC")
 
         if sol_msa:
             mask = (sol_msa["r"] >= 1.0) & (sol_msa["r"] <= 3.5)
@@ -190,6 +203,9 @@ def plot_g000_density_progression():
         if sol_qhnc:
             mask = (sol_qhnc["r"] >= 1.0) & (sol_qhnc["r"] <= 3.5)
             ax.plot(sol_qhnc["r"][mask], sol_qhnc["g000"][mask], color=C_QHNC, linestyle='-', linewidth=2.0, label='QHNC')
+        if sol_rhnc:
+            mask = (sol_rhnc["r"] >= 1.0) & (sol_rhnc["r"] <= 3.5)
+            ax.plot(sol_rhnc["r"][mask], sol_rhnc["g000"][mask], color=C_RHNC, linestyle=':', linewidth=2.2, label='RHNC')
 
         ax.set_title(f"Panel ({chr(97 + panels.index(p))}): $\\rho^* = {p['rho']}$, $\\mu^{{*2}} = {p['mu2']}$ (PLW Fig. {p['fig_num']})", fontsize=11, fontweight='bold')
         ax.set_xlabel(r'$r / \sigma$', fontweight='bold')
@@ -210,7 +226,7 @@ def plot_g000_density_progression():
     print("✓ Generated fig_plw_g000_grid")
 
 def plot_plw_error_bars():
-    """Generates bar chart comparing RMSE across all 10 PLW datasets for MSA, LHNC, QHNC"""
+    """Generates bar chart comparing RMSE across all 10 PLW datasets for MSA, LHNC, QHNC, RHNC"""
     summary_file = os.path.join(DATA_DIR, "plw_benchmark_summary.dat")
     if not os.path.exists(summary_file):
         return
@@ -233,18 +249,21 @@ def plot_plw_error_bars():
 
     states = ["rho_0.15_mu2_2.0", "rho_0.4_mu2_2.75", "rho_0.6_mu2_2.75", "rho_0.8_mu2_2.75"]
     state_labels = [r"$\rho^*=0.15$", r"$\rho^*=0.40$", r"$\rho^*=0.60$", r"$\rho^*=0.80$"]
+    closures = ["MSA", "LHNC", "QHNC", "RHNC"]
+    colors = [C_MSA, C_LHNC, C_QHNC, C_RHNC]
 
-    fig, axes = plt.subplots(1, 3, figsize=(13, 4.5), dpi=300)
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4.8), dpi=300)
+    n_cl = len(closures)
+    width = 0.8 / n_cl
 
     # Subplot 1: RMSE g000
     ax = axes[0]
     x = np.arange(len(states))
-    width = 0.25
 
-    for i, cl in enumerate(["MSA", "LHNC", "QHNC"]):
+    for i, cl in enumerate(closures):
         vals = [next((d["g000"] for d in data if d["state"] == s and d["closure"] == cl), np.nan) for s in states]
-        c = C_MSA if cl == "MSA" else (C_LHNC if cl == "LHNC" else C_QHNC)
-        ax.bar(x + (i - 1) * width, vals, width, label=cl, color=c, alpha=0.85, edgecolor='black', linewidth=0.8)
+        pos = x + (i - (n_cl - 1) / 2.0) * width
+        ax.bar(pos, vals, width, label=cl, color=colors[i], alpha=0.85, edgecolor='black', linewidth=0.8)
 
     ax.set_ylabel(r'$\text{RMSE}(g^{000})$', fontweight='bold')
     ax.set_xticks(x)
@@ -256,10 +275,10 @@ def plot_plw_error_bars():
     # Subplot 2: RMSE h110
     ax = axes[1]
     x_sub = np.arange(3)
-    for i, cl in enumerate(["MSA", "LHNC", "QHNC"]):
+    for i, cl in enumerate(closures):
         vals = [next((d["h110"] for d in data if d["state"] == s and d["closure"] == cl), np.nan) for s in states[:3]]
-        c = C_MSA if cl == "MSA" else (C_LHNC if cl == "LHNC" else C_QHNC)
-        ax.bar(x_sub + (i - 1) * width, vals, width, label=cl, color=c, alpha=0.85, edgecolor='black', linewidth=0.8)
+        pos = x_sub + (i - (n_cl - 1) / 2.0) * width
+        ax.bar(pos, vals, width, label=cl, color=colors[i], alpha=0.85, edgecolor='black', linewidth=0.8)
 
     ax.set_ylabel(r'$\text{RMSE}(h^{110})$', fontweight='bold')
     ax.set_xticks(x_sub)
@@ -269,10 +288,10 @@ def plot_plw_error_bars():
 
     # Subplot 3: RMSE h112
     ax = axes[2]
-    for i, cl in enumerate(["MSA", "LHNC", "QHNC"]):
+    for i, cl in enumerate(closures):
         vals = [next((d["h112"] for d in data if d["state"] == s and d["closure"] == cl), np.nan) for s in states[:3]]
-        c = C_MSA if cl == "MSA" else (C_LHNC if cl == "LHNC" else C_QHNC)
-        ax.bar(x_sub + (i - 1) * width, vals, width, label=cl, color=c, alpha=0.85, edgecolor='black', linewidth=0.8)
+        pos = x_sub + (i - (n_cl - 1) / 2.0) * width
+        ax.bar(pos, vals, width, label=cl, color=colors[i], alpha=0.85, edgecolor='black', linewidth=0.8)
 
     ax.set_ylabel(r'$\text{RMSE}(h^{112})$', fontweight='bold')
     ax.set_xticks(x_sub)

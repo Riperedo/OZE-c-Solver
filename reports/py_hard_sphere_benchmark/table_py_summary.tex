@@ -1,0 +1,21 @@
+\begin{table}[htbp]
+\centering
+\small
+\caption{Numerical error metrics for $g(r)$ and $S(k)$, contact values, and execution times for hard spheres under Percus-Yevick closure across seven packing fractions $\phi$.}
+\label{tab:py_summary}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{c c c c c c c c}
+\hline\hline
+$\phi$ & RMSE $g(r)$ & $g_{\text{num}}(\sigma^+)$ & $g_{\text{ana}}(\sigma^+)$ & Error $g(\sigma^+)$ (\%) & RMSE $S(k)$ & Max $\Delta S(k)$ & Time (s) \\
+\hline
+0.10 & 1.819e-03 & 1.2896 & 1.2963 & 0.51\% & 1.492e-03 & 4.255e-03 & 1.73 \\
+0.20 & 4.419e-03 & 1.6994 & 1.7187 & 1.13\% & 2.485e-03 & 6.473e-03 & 1.94 \\
+0.30 & 8.348e-03 & 2.3034 & 2.3469 & 1.86\% & 4.074e-03 & 1.413e-02 & 1.86 \\
+0.40 & 1.464e-02 & 3.2415 & 3.3333 & 2.75\% & 6.974e-03 & 3.141e-02 & 2.17 \\
+0.50 & 2.490e-02 & 4.8070 & 5.0000 & 3.86\% & 1.250e-02 & 7.834e-02 & 2.50 \\
+0.55 & 3.237e-02 & 6.0108 & 6.2963 & 4.53\% & 1.724e-02 & 1.323e-01 & 6.32 \\
+0.60 & 4.182e-02 & 7.6946 & 8.1250 & 5.30\% & 2.437e-02 & 2.348e-01 & 14.18 \\
+\hline\hline
+\end{tabular}
+}
+\end{table}
