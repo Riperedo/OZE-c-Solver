@@ -39,6 +39,8 @@ core.[0-9]*
 
 # Carpetas auxiliares
 aux/
+aux_code/
+resultados_barrido/
 
 # LaTeX build artifacts
 *.aux
