@@ -48,9 +48,12 @@ resultados_barrido/
 *.toc
 *.synctex.gz
 
-# Copyrighted Scanned Figures
+# Copyrighted Scanned Figures and Reference Materials
+test/Referencias/
+test/Referencias/**
 test/data_Monte_Carlo_Simulations/**/*.png
 test/**/*.png
+
 
 # Private Local Development History
 History.md
