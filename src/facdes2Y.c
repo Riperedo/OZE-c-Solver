@@ -231,7 +231,7 @@ static void solve_and_process(double volumeFactor, double Temperature, double Te
     
     double *rkVec, *ykVec, *xOutputVec;
     
-    rmax = 160;
+    rmax = (potentialNumber == 14 || potentialNumber == 15) ? 160.0 : 40.0;
     
     // Allocate memory for solver arrays and output
     rkVec = malloc(nodesFacdes2Y * sizeof(double));
@@ -452,8 +452,14 @@ void interpolationFunc(double *xInput, double *yInput, double *xOutput, double *
 
     gsl_spline_init(spline_steffen, xInput, yInput, N);
 
+    double x_min = xInput[0];
+    double x_max = xInput[N - 1];
+
     for (i = 0; i < nrowsOutput; ++i) {
-        yOutput[i] = gsl_spline_eval(spline_steffen, xOutput[i], acc);
+        double x_eval = xOutput[i];
+        if (x_eval < x_min) x_eval = x_min;
+        if (x_eval > x_max) x_eval = x_max;
+        yOutput[i] = gsl_spline_eval(spline_steffen, x_eval, acc);
     }
 
     gsl_spline_free(spline_steffen);

@@ -995,7 +995,7 @@ void Escribe(double *gamma, double *cFuncMatrix, double *Sk, double *Gr, double 
     }
 
     qmax = q[nrows - 1];
-    rk_max = qmax / 2.0;
+    rk_max = qmax;
     dk = rk_max / (1.0 * nrows);
 
     for (i = 0; i < nrows; i++) {
@@ -1237,7 +1237,7 @@ void closrel(double *gamma, int potentialID, int closureID, double *cFuncMatrix,
     for (k = 0; k < ncols; k++) {
         if (potentialID == 1 || potentialID == 2 || potentialID == 3) {
             sigmaAux[k] = (sigmaVec[k] / 2.0);
-        } else if (potentialID == 10) {
+        } else if (potentialID == 10 || potentialID == 12 || potentialID == 13 || potentialID == 16) {
             sigmaAux[k] = 0.0;
         } else {
             sigmaAux[k] = sigmaVec[k];

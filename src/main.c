@@ -65,6 +65,7 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "  --init-sk   <string>       Input .dat file with analytical/prior structure factors (k, S000, S110, S112) for warm-start.\n");
     fprintf(stderr, "  --init-gamma <string>      Input .dat file with prior gamma(r) for instantaneous warm-start (skips density ramp).\n");
     fprintf(stderr, "  --gamma, --save-gamma      Calculate and save indirect correlation function gamma(r).\n");
+    fprintf(stderr, "  --kmax      <double>       Maximum k in Fourier space (default: 15*pi ~ 47.1239).\n");
     fprintf(stderr, "\nExamples:\n");
     fprintf(stderr, "  Spherical (Hertzian):  %s --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024\n", prog_name);
     fprintf(stderr, "  Dipolar (RHNC):        %s --closure RHNC --potential 14 --volfactor 0.418879 --temp 1.0 --dipole 1.6583 --nodes 4096 --rmax 30.0\n\n", prog_name);
@@ -311,6 +312,7 @@ int main(int argc, char *argv[]) {
     const char *init_sk_file = NULL; // Analytical structure factor input file
     const char *init_gamma_file = NULL; // Prior gamma(r) input file for warm-start
     int save_gamma = 0;       // Flag to save indirect correlation function gamma(r)
+    double k_max_val = 15.0 * M_PI; // Default k_max = 15*pi ~ 47.1238898
     
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
@@ -346,6 +348,8 @@ int main(int argc, char *argv[]) {
             }
         } else if (strcmp(argv[i], "--gamma") == 0 || strcmp(argv[i], "--save-gamma") == 0) {
             save_gamma = 1;
+        } else if (strcmp(argv[i], "--kmax") == 0 && i + 1 < argc) {
+            k_max_val = atof(argv[++i]);
         } else if (strcmp(argv[i], "--nodes") == 0 && i + 1 < argc) {
             nodesFacdes2Y = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--knodes") == 0 && i + 1 < argc) {
@@ -451,7 +455,7 @@ int main(int argc, char *argv[]) {
     }
     
     // Linear discretization of k grid
-    double k_max = 10.0; 
+    double k_max = k_max_val; 
     double k_min = k_max / (double)k_nodes;
     double dk = (k_max - k_min) / (double)(k_nodes - 1);
     
