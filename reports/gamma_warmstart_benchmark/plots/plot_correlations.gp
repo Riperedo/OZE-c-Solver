@@ -18,18 +18,18 @@ set yrange [0.0:4.0]
 set grid lc rgb "#e8e8e8" dt 2
 set key top right
 
-plot "data/gr_cold_phi_0.55.dat" using 1:2 with lines lw 3 lc rgb "#377eb8" title "Cold-Start Solution", \
-     "data/gr_warm_phi_0.55.dat" using 1:2 with points pt 6 ps 0.7 lc rgb "#e41a1c" title "Warm-Start Solution"
+plot "data/gr_cold_phi_0.55.dat" using 1:2 with lines lw 2.5 lc rgb "#377eb8" title "Cold-Start Solution", \
+     "data/gr_warm_phi_0.55.dat" every 6 using 1:2 with points pt 6 ps 0.6 lc rgb "#e41a1c" title "Warm-Start Solution"
 
 # Bottom: Structure Factor S(k) vs Exact Analytical Wertheim Solution
 set xlabel "k {/Symbol s}"
 set ylabel "S(k)"
 set xrange [0.0:25.0]
-set yrange [0.0:4.2]
+set yrange [0.0:5.0]
 set key top right
 
 plot "data/sk_analytical_phi_0.55.dat" using 1:2 with lines lw 2.5 lc rgb "#000000" title "Exact Wertheim-Thiele Analytical", \
-     "data/sk_warm_phi_0.55.dat" using 1:2 with points pt 7 ps 0.6 lc rgb "#4daf4a" title "Warm-Start OZE Solver"
+     "data/sk_warm_phi_0.55.dat" every 8 using 1:2 with points pt 7 ps 0.5 lc rgb "#2ca02c" title "Warm-Start OZE Solver"
 
 unset multiplot
 

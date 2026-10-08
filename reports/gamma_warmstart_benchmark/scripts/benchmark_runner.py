@@ -53,26 +53,27 @@ def run_solver(phi, init_gamma=None, timeout=TIMEOUT_SEC):
 
 def analytical_sk_scalar(k_val, phi, sigma=1.0):
     """Exact Wertheim-Thiele solution for Hard Sphere Percus-Yevick S(k) at scalar k."""
+    x = abs(k_val * sigma)
     eta = phi
-    lambda1 = (1.0 + 2.0 * eta)**2 / (1.0 - eta)**4
-    lambda2 = -1.5 * eta * (1.0 + eta / 2.0)**2 / (1.0 - eta)**4
+    l1 = (1.0 + 2.0 * eta)**2 / (1.0 - eta)**4
+    l2 = -(1.0 + eta / 2.0)**2 / (1.0 - eta)**4
     
-    k_sig = max(abs(k_val * sigma), 1e-9)
-    s = math.sin(k_sig)
-    c = math.cos(k_sig)
-    
-    alpha = lambda1
-    beta = 6.0 * eta * lambda2
-    gamma_c = 0.5 * eta * lambda1
-    
-    term1 = alpha * (s - k_sig * c) / (k_sig**3)
-    term2 = beta * (2.0 * k_sig * s - (k_sig**2 - 2.0) * c - 2.0) / (k_sig**4)
-    term3 = gamma_c * ((4.0 * k_sig**3 - 24.0 * k_sig) * s - (k_sig**4 - 12.0 * k_sig**2 + 24.0) * c + 24.0) / (k_sig**6)
-    
-    rho = 6.0 * eta / (math.pi * sigma**3)
-    c_k = -4.0 * math.pi * sigma**3 * (term1 + term2 + term3)
-    
-    return 1.0 / (1.0 - rho * c_k)
+    if x < 0.05:
+        xs2 = x * x
+        xs4 = xs2 * xs2
+        xs6 = xs4 * xs2
+        t1 = l1 * (1.0 / 3.0 - xs2 / 30.0 + xs4 / 840.0 - xs6 / 45360.0)
+        t2 = 6.0 * eta * l2 * (1.0 / 4.0 - xs2 / 24.0 + xs4 / 720.0 - xs6 / 40320.0)
+        t3 = 0.5 * eta * l1 * (1.0 / 6.0 - xs2 / 48.0 + xs4 / 1200.0 - xs6 / 50400.0)
+    else:
+        s = math.sin(x)
+        c = math.cos(x)
+        t1 = l1 * (s - x * c) / (x**3)
+        t2 = 6.0 * eta * l2 * (2.0 * x * s - (x**2 - 2.0) * c - 2.0) / (x**4)
+        t3 = 0.5 * eta * l1 * ((4.0 * x**3 - 24.0 * x) * s - (x**4 - 12.0 * x**2 + 24.0) * c + 24.0) / (x**6)
+        
+    rho_c = -24.0 * eta * (t1 + t2 + t3)
+    return 1.0 / (1.0 - rho_c)
 
 def main():
     print("=" * 70)
