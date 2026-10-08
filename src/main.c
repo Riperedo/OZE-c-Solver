@@ -63,6 +63,7 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "  --temp-steps <int>         Number of intermediate continuation stages (default: 10).\n");
     fprintf(stderr, "  --ramp                     Enable automated geometric temperature continuation ramp.\n");
     fprintf(stderr, "  --init-sk   <string>       Input .dat file with analytical/prior structure factors (k, S000, S110, S112) for warm-start.\n");
+    fprintf(stderr, "  --gamma, --save-gamma      Calculate and save indirect correlation function gamma(r).\n");
     fprintf(stderr, "\nExamples:\n");
     fprintf(stderr, "  Spherical (Hertzian):  %s --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024\n", prog_name);
     fprintf(stderr, "  Dipolar (RHNC):        %s --closure RHNC --potential 14 --volfactor 0.418879 --temp 1.0 --dipole 1.6583 --nodes 4096 --rmax 30.0\n\n", prog_name);
@@ -307,6 +308,7 @@ int main(int argc, char *argv[]) {
     int temp_steps = 10;      // Number of continuation stages
     int use_ramp = 0;         // Flag for automatic temperature ramping
     const char *init_sk_file = NULL; // Analytical structure factor input file
+    int save_gamma = 0;       // Flag to save indirect correlation function gamma(r)
     
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
@@ -336,6 +338,8 @@ int main(int argc, char *argv[]) {
             use_ramp = 1;
         } else if (strcmp(argv[i], "--init-sk") == 0 && i + 1 < argc) {
             init_sk_file = argv[++i];
+        } else if (strcmp(argv[i], "--gamma") == 0 || strcmp(argv[i], "--save-gamma") == 0) {
+            save_gamma = 1;
         } else if (strcmp(argv[i], "--nodes") == 0 && i + 1 < argc) {
             nodesFacdes2Y = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--knodes") == 0 && i + 1 < argc) {
@@ -490,6 +494,12 @@ int main(int argc, char *argv[]) {
         printf("\n# Calculating g(r)...\n");
         gr_HNC(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
                r_vec, gr_output, potentialNumber, nodesFacdes2Y);
+
+        if (save_gamma) {
+            printf("\n# Calculating gamma(r)...\n");
+            gamma_HNC(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
+                      r_vec, gr_output, potentialNumber, nodesFacdes2Y);
+        }
     } else if (strcmp(closure_str, "PY") == 0) {
         printf("\n# Calculating S(k)...\n");
         sk_PY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
@@ -498,6 +508,12 @@ int main(int argc, char *argv[]) {
         printf("\n# Calculating g(r)...\n");
         gr_PY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
                r_vec, gr_output, potentialNumber, nodesFacdes2Y);
+
+        if (save_gamma) {
+            printf("\n# Calculating gamma(r)...\n");
+            gamma_PY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
+                     r_vec, gr_output, potentialNumber, nodesFacdes2Y);
+        }
     } else { // "RY" Closure
         printf("\n# Calculating S(k)...\n");
         sk_RY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
@@ -506,6 +522,12 @@ int main(int argc, char *argv[]) {
         printf("\n# Calculating g(r)...\n");
         gr_RY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
                r_vec, gr_output, potentialNumber, nodesFacdes2Y);
+
+        if (save_gamma) {
+            printf("\n# Calculating gamma(r)...\n");
+            gamma_RY(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, 
+                     r_vec, gr_output, potentialNumber, nodesFacdes2Y);
+        }
     }
 
     // Free memory

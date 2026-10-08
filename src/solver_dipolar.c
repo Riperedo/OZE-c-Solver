@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <sys/stat.h>
 
 // Forward declarations of closure functions
 void closure_MSA_dipolar(double **c, double **eta, double *r, int n_points, double beta_mu2, double sigma);
@@ -760,6 +761,11 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
     solve_oz_k_space(C_k->data, H_k->data, nodes, rho);
 
     // 4. Output Results
+    struct stat st = {0};
+    if (stat("output", &st) == -1) {
+        mkdir("output", 0755);
+    }
+
     FILE *fp = fopen("output/output_dipolar.dat", "w");
     if (fp) {
         fprintf(fp, "# r h000 h110 h112 c000 c110 c112\n");
@@ -771,6 +777,19 @@ void solver_dipolar(int closureID, double temp, double rho, double dipole_moment
         }
         fclose(fp);
         printf("Written output/output_dipolar.dat\n");
+    }
+
+    // Output gamma(r) (indirect correlation function eta(r) = h(r) - c(r))
+    FILE *fp_gamma = fopen("output/output_dipolar_gamma.dat", "w");
+    if (fp_gamma) {
+        fprintf(fp_gamma, "# r gamma000 gamma110 gamma112\n");
+        for (int i = 0; i < nodes; i++) {
+            fprintf(fp_gamma, "%.5e %.5e %.5e %.5e\n", 
+                r[i], 
+                eta->data[0][i], eta->data[1][i], eta->data[2][i]);
+        }
+        fclose(fp_gamma);
+        printf("Written output/output_dipolar_gamma.dat\n");
     }
 
     // Output k-space Results

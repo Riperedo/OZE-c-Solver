@@ -185,6 +185,33 @@ void gr_RY(double volumeFactor, double Temperature, double Temperature2, double 
 }
 
 /**
+ * @brief Calculates the Indirect Correlation Function using the HNC closure.
+ */
+void gamma_HNC(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r_vec, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, r_vec, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 2, 4, "HNC_GammaDeR.dat");
+}
+
+/**
+ * @brief Calculates the Indirect Correlation Function using the PY closure.
+ */
+void gamma_PY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r_vec, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, r_vec, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 1, 4, "PY_GammaDeR.dat");
+}
+
+/**
+ * @brief Calculates the Indirect Correlation Function using the Rogers-Young closure.
+ */
+void gamma_RY(double volumeFactor, double Temperature, double Temperature2, double lambda_a, double lambda_r, const gsl_vector *r_vec, \
+            double *OutputVec, int potentialNumber, int nodesFacdes2Y){
+    solve_and_process(volumeFactor, Temperature, Temperature2, lambda_a, lambda_r, r_vec, OutputVec, 
+                     potentialNumber, nodesFacdes2Y, 3, 4, "RY_GammaDeR.dat");
+}
+
+/**
  * @brief Generic helper function to solve OZ equation and process results.
  * 
  * This function encapsulates the common logic for all solver variants:
@@ -231,6 +258,12 @@ static void solve_and_process(double volumeFactor, double Temperature, double Te
     // Interpolate results to input grid
     interpolationFunc(rkVec, ykVec, xOutputVec, OutputVec, nodesFacdes2Y, (int)nodesInput);
     
+    // Ensure output directory exists
+    struct stat st = {0};
+    if (stat("output", &st) == -1) {
+        mkdir("output", 0755);
+    }
+
     // Write to file in output/ directory
     char filepath[256];
     snprintf(filepath, sizeof(filepath), "output/%s", filename);
@@ -292,7 +325,7 @@ int facdes2YFunc(const int nodes, int nrho, double rmax, int potentialID, int cl
 
     int i;
     int printFlag = 0;
-    double *StructFactor, *FT_Cr, *Gr_data;
+    double *StructFactor, *FT_Cr, *Gr_data, *Gamma_data;
     bool IsPolidispersed;
     species especie1, especie2;
     
@@ -305,8 +338,9 @@ int facdes2YFunc(const int nodes, int nrho, double rmax, int potentialID, int cl
     StructFactor    = malloc(nrows*2 * sizeof(double));
     FT_Cr           = malloc(nrows*2 * sizeof(double));
     Gr_data         = malloc(nrows*2 * sizeof(double));
+    Gamma_data      = malloc(nrows*2 * sizeof(double));
 
-    if (r == NULL || q == NULL || U == NULL || Up == NULL || sigmaVec == NULL || StructFactor == NULL || FT_Cr == NULL || Gr_data == NULL) {
+    if (r == NULL || q == NULL || U == NULL || Up == NULL || sigmaVec == NULL || StructFactor == NULL || FT_Cr == NULL || Gr_data == NULL || Gamma_data == NULL) {
         printf("Memory allocation failed in facdes2YFunc.\n");
         return 1;
     }
@@ -342,7 +376,7 @@ int facdes2YFunc(const int nodes, int nrho, double rmax, int potentialID, int cl
     input(volumeFactor, xnu, especie1, especie2, rmax, potentialID);
 
     // Perform calculations
-    OZ2(StructFactor, Gr_data, potentialID, closureID, alpha, EZ, rmax, nrho, folderName, &printFlag);
+    OZ2(StructFactor, Gr_data, Gamma_data, potentialID, closureID, alpha, EZ, rmax, nrho, folderName, &printFlag);
 
     printf("\n\n");
 
@@ -369,6 +403,13 @@ int facdes2YFunc(const int nodes, int nrho, double rmax, int potentialID, int cl
             }
             break;
         
+        case 4: // Indirect correlation function gamma(r)
+            for (i=0; i<nrows; i++){
+                rkVec[i] = Gamma_data[i*2 + 0];
+                ykVec[i] = Gamma_data[i*2 + 1];
+            }
+            break;
+
         default : // Structure factor
             for (i=0; i<nrows; i++){
                 rkVec[i] = StructFactor[i*2 + 0];
@@ -385,6 +426,7 @@ int facdes2YFunc(const int nodes, int nrho, double rmax, int potentialID, int cl
     free(StructFactor);
     free(FT_Cr);
     free(Gr_data);
+    free(Gamma_data);
     free(folderName);
 
     return 0;

@@ -2,9 +2,24 @@
 # Ornstein-Zernike Equation Solver (Spherical & Non-Spherical Closures)
 
 # Compiler and Flags
-CC = gcc
-CFLAGS = -Wall -O2 -Iinclude
-LIBS = -lgsl -lgslcblas -lm
+CC ?= gcc
+
+# Auto-detect GSL via pkg-config or conda environment
+GSL_CFLAGS ?= $(shell pkg-config --cflags gsl 2>/dev/null)
+GSL_LIBS   ?= $(shell pkg-config --libs gsl 2>/dev/null)
+
+ifeq ($(GSL_CFLAGS),)
+  ifneq ($(wildcard $(CONDA_PREFIX)/include/gsl/gsl_vector.h),)
+    GSL_CFLAGS = -I$(CONDA_PREFIX)/include
+    GSL_LIBS = -L$(CONDA_PREFIX)/lib -lgsl -lgslcblas -lm -Wl,-rpath,$(CONDA_PREFIX)/lib
+  else ifneq ($(wildcard /home/jinzo/miniconda3/include/gsl/gsl_vector.h),)
+    GSL_CFLAGS = -I/home/jinzo/miniconda3/include
+    GSL_LIBS = -L/home/jinzo/miniconda3/lib -lgsl -lgslcblas -lm -Wl,-rpath,/home/jinzo/miniconda3/lib
+  endif
+endif
+
+CFLAGS ?= -Wall -O2 -Iinclude $(GSL_CFLAGS)
+LIBS ?= $(if $(GSL_LIBS),$(GSL_LIBS),-lgsl -lgslcblas -lm)
 
 # Directories
 SRC_DIR = src
@@ -23,7 +38,7 @@ GREEN = \033[0;32m
 NC = \033[0m # No Color
 
 # Default Rule
-all: $(TARGET)
+all: dirs $(TARGET)
 	@echo "$(GREEN)✓ Build successful!$(NC)"
 	@echo "Executable: $(TARGET)"
 

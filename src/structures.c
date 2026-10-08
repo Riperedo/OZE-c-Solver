@@ -517,7 +517,7 @@ void POT(species especie1, species especie2, int potentialID, double xnu) {
  * @param folderName Output folder name.
  * @param printFlag Flag to control printing.
  */
-void OZ2(double *Sk, double *Gr, int potentialID, int closureID, double alpha, double EZ, \
+void OZ2(double *Sk, double *Gr, double *Gamma, int potentialID, int closureID, double alpha, double EZ, \
          double rmax, int nrho, char folderName[20], int *printFlag) {
 
     int i, k;
@@ -665,7 +665,7 @@ void OZ2(double *Sk, double *Gr, int potentialID, int closureID, double alpha, d
 
     Ng(kj, gammaInput1, gammaOutput, potentialID, closureID, cFuncMatrix, T, TFlag, alpha, EZ, rmax, nrho, printFlag);
 
-    Escribe(gammaOutput, cFuncMatrix, Sk, Gr, potentialID, closureID, folderName);
+    Escribe(gammaOutput, cFuncMatrix, Sk, Gr, Gamma, potentialID, closureID, folderName);
 
     Termo(gammaOutput, cFuncMatrix, &pv, &chic, &ener);
     PexV = pv/rho - 1.0;
@@ -822,7 +822,7 @@ void RY(double pv1, double pv2, double chic, double ddrho, double *alpha, double
  * @param closureID Closure ID.
  * @param folderName Output folder name.
  */
-void Escribe(double *gamma, double *cFuncMatrix, double *Sk, double *Gr, int potentialID, int closureID, char folderName[20]) {
+void Escribe(double *gamma, double *cFuncMatrix, double *Sk, double *Gr, double *Gamma, int potentialID, int closureID, char folderName[20]) {
 
     int i, k;
     double dk, qmax, rk_max, sqmax, delta;
@@ -846,6 +846,10 @@ void Escribe(double *gamma, double *cFuncMatrix, double *Sk, double *Gr, int pot
         }
         Gr[i*2 + 0] = r[i];
         Gr[i*2 + 1] = gh[i*ncols + 0] + 1.0;
+        if (Gamma != NULL) {
+            Gamma[i*2 + 0] = r[i];
+            Gamma[i*2 + 1] = gamma[i*ncols + 0];
+        }
     }
 
     qmax = q[nrows - 1];

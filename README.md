@@ -100,6 +100,7 @@ make test-all       # Runs both spherical and non-spherical test suites
 | `--lambda_a` | `double` | Attractive / potential range parameter | `0.0` |
 | `--lambda_r` | `double` | Repulsive / screening parameter | `0.0` |
 | `--temp2` | `double` | Secondary temperature / step width | `1.0` |
+| `--gamma`, `--save-gamma` | flag | Calculate and save indirect correlation function $\gamma(r)$ | Disabled |
 
 ---
 
@@ -159,12 +160,15 @@ Solve high-dipole regime ($\mu^{*2} = 2.75$) via annealing from $T^*=5.0$:
 Outputs are saved in the `output/` directory:
 
 - **Isotropic fluids**:
-  - `output/HNC_SdeK.dat`: Static structure factor $S(k)$.
-  - `output/HNC_GdeR.dat`: Radial distribution function $g(r)$.
+  - `output/<CLOSURE>_SdeK.dat`: Static structure factor $S(k)$.
+  - `output/<CLOSURE>_GdeR.dat`: Radial distribution function $g(r)$.
+  - `output/<CLOSURE>_GammaDeR.dat`: Indirect correlation function $\gamma(r) = h(r) - c(r)$ (enabled with `--gamma`).
 - **Dipolar fluids (Potential 14)**:
   - `output/sk_dipolar_000.dat`, `sk_dipolar_110.dat`, `sk_dipolar_112.dat`: Projections $S^{000}(k)$, $S^{110}(k)$, and $S^{112}(k)$.
   - `output/gr_dipolar_000.dat`, `gr_dipolar_110.dat`, `gr_dipolar_112.dat`: Projections $g^{000}(r)$, $h^{110}(r)$, and $h^{112}(r)$.
   - `output/cr_dipolar_000.dat`, `cr_dipolar_110.dat`, `cr_dipolar_112.dat`: Direct correlation projections $c^{l_1 l_2 l}(r)$.
+  - `output/output_dipolar.dat`: Consolidated $r$, $h(r)$, and $c(r)$ projections.
+  - `output/output_dipolar_gamma.dat`: Consolidated indirect correlation function projections $\gamma^{000}(r)$, $\gamma^{110}(r)$, and $\gamma^{112}(r)$.
 
 ---
 
