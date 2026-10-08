@@ -40,4 +40,8 @@ void appendPotentialID(char *inputString, int potentialID);
 void PotentialName(int potentialID, double xnu);
 void printLoadingBar(int progress, int total);
 
+void set_init_gamma_file(const char *filename);
+const char *get_init_gamma_file(void);
+int load_init_gamma(const char *filename, const double *r_grid, double *gammaInput, int nrows, int ncols);
+
 #endif /* FACDES2Y_FUNCS_DOT_H */

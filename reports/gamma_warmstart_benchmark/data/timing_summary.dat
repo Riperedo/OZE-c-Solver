@@ -1,0 +1,5 @@
+# phi cold_mean cold_std warm_mean warm_std speedup cold_status warm_status
+0.50 7.2730 0.1474 4.8460 0.2404 1.50 CONV CONV
+0.55 14.3202 0.0322 5.8096 0.0043 2.46 CONV CONV
+0.60 30.3400 0.0425 10.9131 0.0352 2.78 CONV CONV
+0.64 35.0000 0.0000 19.3110 0.2500 inf DIVERGED CONV

@@ -63,6 +63,7 @@ void print_usage(const char *prog_name) {
     fprintf(stderr, "  --temp-steps <int>         Number of intermediate continuation stages (default: 10).\n");
     fprintf(stderr, "  --ramp                     Enable automated geometric temperature continuation ramp.\n");
     fprintf(stderr, "  --init-sk   <string>       Input .dat file with analytical/prior structure factors (k, S000, S110, S112) for warm-start.\n");
+    fprintf(stderr, "  --init-gamma <string>      Input .dat file with prior gamma(r) for instantaneous warm-start (skips density ramp).\n");
     fprintf(stderr, "  --gamma, --save-gamma      Calculate and save indirect correlation function gamma(r).\n");
     fprintf(stderr, "\nExamples:\n");
     fprintf(stderr, "  Spherical (Hertzian):  %s --closure HNC --potential 13 --volfactor 0.3 --temp 1.0 --nodes 4096 --knodes 1024\n", prog_name);
@@ -308,6 +309,7 @@ int main(int argc, char *argv[]) {
     int temp_steps = 10;      // Number of continuation stages
     int use_ramp = 0;         // Flag for automatic temperature ramping
     const char *init_sk_file = NULL; // Analytical structure factor input file
+    const char *init_gamma_file = NULL; // Prior gamma(r) input file for warm-start
     int save_gamma = 0;       // Flag to save indirect correlation function gamma(r)
     
     // Parse command-line arguments
@@ -338,6 +340,10 @@ int main(int argc, char *argv[]) {
             use_ramp = 1;
         } else if (strcmp(argv[i], "--init-sk") == 0 && i + 1 < argc) {
             init_sk_file = argv[++i];
+        } else if (strcmp(argv[i], "--init-gamma") == 0 || strcmp(argv[i], "--gamma-init") == 0) {
+            if (i + 1 < argc) {
+                init_gamma_file = argv[++i];
+            }
         } else if (strcmp(argv[i], "--gamma") == 0 || strcmp(argv[i], "--save-gamma") == 0) {
             save_gamma = 1;
         } else if (strcmp(argv[i], "--nodes") == 0 && i + 1 < argc) {
@@ -484,6 +490,10 @@ int main(int argc, char *argv[]) {
     printf("Starting calculation...\n");
     printf("Closure: %s, Potential: %d, phi: %.4f, T*: %.4f, N_nodes: %d, N_k: %d\n", 
            closure_str, potentialNumber, volumeFactor, Temperature, nodesFacdes2Y, k_nodes);
+    if (init_gamma_file != NULL) {
+        printf("Warm-start gamma seed: %s\n", init_gamma_file);
+    }
+    set_init_gamma_file(init_gamma_file);
 
     // Dispatch to corresponding calculation functions
     if (strcmp(closure_str, "HNC") == 0) {

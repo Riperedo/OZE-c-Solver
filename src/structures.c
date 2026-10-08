@@ -9,6 +9,127 @@
 
 #include "structures.h"
 #include "math_aux.h"
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_spline.h>
+#include <gsl/gsl_interp.h>
+
+static char g_init_gamma_filepath[512] = "";
+
+void set_init_gamma_file(const char *filename) {
+    if (filename != NULL && strlen(filename) > 0) {
+        strncpy(g_init_gamma_filepath, filename, sizeof(g_init_gamma_filepath) - 1);
+        g_init_gamma_filepath[sizeof(g_init_gamma_filepath) - 1] = '\0';
+    } else {
+        g_init_gamma_filepath[0] = '\0';
+    }
+}
+
+const char *get_init_gamma_file(void) {
+    if (g_init_gamma_filepath[0] != '\0') {
+        return g_init_gamma_filepath;
+    }
+    return NULL;
+}
+
+int load_init_gamma(const char *filename, const double *r_grid, double *gammaInput, int nrows_val, int ncols_val) {
+    if (filename == NULL || strlen(filename) == 0) {
+        return -1;
+    }
+
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        fprintf(stderr, "[Warm-Start] Error: Could not open init-gamma file '%s' for reading.\n", filename);
+        return -1;
+    }
+
+    int capacity = 4096;
+    double *r_file = malloc(capacity * sizeof(double));
+    double *g_file = malloc(capacity * sizeof(double));
+    if (!r_file || !g_file) {
+        if (r_file) free(r_file);
+        if (g_file) free(g_file);
+        fclose(f);
+        return -1;
+    }
+
+    char line[512];
+    int count = 0;
+    while (fgets(line, sizeof(line), f)) {
+        char *ptr = line;
+        while (*ptr == ' ' || *ptr == '\t') ptr++;
+        if (*ptr == '#' || *ptr == '\0' || *ptr == '\n' || *ptr == '\r') {
+            continue;
+        }
+        double rv, gv;
+        if (sscanf(ptr, "%lf %lf", &rv, &gv) == 2) {
+            if (count >= capacity) {
+                int new_cap = capacity * 2;
+                double *nr = realloc(r_file, new_cap * sizeof(double));
+                if (!nr) {
+                    free(r_file);
+                    free(g_file);
+                    fclose(f);
+                    return -1;
+                }
+                r_file = nr;
+                double *ng = realloc(g_file, new_cap * sizeof(double));
+                if (!ng) {
+                    free(r_file);
+                    free(g_file);
+                    fclose(f);
+                    return -1;
+                }
+                g_file = ng;
+                capacity = new_cap;
+            }
+            if (count > 0 && rv <= r_file[count - 1]) {
+                continue;
+            }
+            r_file[count] = rv;
+            g_file[count] = gv;
+            count++;
+        }
+    }
+    fclose(f);
+
+    if (count < 2) {
+        fprintf(stderr, "[Warm-Start] Error: Init-gamma file '%s' has fewer than 2 valid points (count=%d).\n", filename, count);
+        free(r_file);
+        free(g_file);
+        return -1;
+    }
+
+    gsl_interp_accel *acc = gsl_interp_accel_alloc();
+    const gsl_interp_type *interp_type = (count >= 4) ? gsl_interp_cspline : gsl_interp_linear;
+    gsl_spline *spline = gsl_spline_alloc(interp_type, count);
+    gsl_spline_init(spline, r_file, g_file, count);
+
+    double min_r = r_file[0];
+    double max_r = r_file[count - 1];
+
+    for (int i = 0; i < nrows_val; i++) {
+        double ri = r_grid[i];
+        double g_interp = 0.0;
+        if (ri < min_r) {
+            g_interp = g_file[0];
+        } else if (ri > max_r) {
+            g_interp = 0.0;
+        } else {
+            g_interp = gsl_spline_eval(spline, ri, acc);
+        }
+
+        for (int k = 0; k < ncols_val; k++) {
+            gammaInput[i * ncols_val + k] = g_interp;
+        }
+    }
+
+    gsl_spline_free(spline);
+    gsl_interp_accel_free(acc);
+    free(r_file);
+    free(g_file);
+
+    return 0;
+}
 
 /**
  * @brief Initializes the system parameters and interaction potentials.
@@ -540,60 +661,79 @@ void OZ2(double *Sk, double *Gr, double *Gamma, int potentialID, int closureID, 
     }
 
     TFlag = 0.0;
+    rhoa = rho; // Target density
 
-    for (k = 0; k < ncols; k++) {
-        for (i = 0; i < nrows; i++) {
-            gammaInput1[i*ncols + k] = 0.0;
-        }
-    }
+    const char *init_file = get_init_gamma_file();
+    int warm_started = 0;
 
-    // Initialize density ramp
-    rhoa = rho;
-    dT = 1.0 / ((double) nrho);
-    drho = rho / ((double) nrho);
+    if (init_file != NULL && strlen(init_file) > 0) {
+        if (load_init_gamma(init_file, r, gammaInput1, nrows, ncols) == 0) {
+            printf("\n[Warm-Start] Successfully loaded initial gamma from '%s'.\n", init_file);
+            printf("[Warm-Start] Skipping 100-step density continuation ramp -> jumping directly to final solve at rho = %.6f.\n\n", rhoa);
+            warm_started = 1;
 
-    kj = 1;
-    rho = kj * drho;
-    T = dT * kj;
-
-    // Initial guess
-    Ng(kj, gammaInput1, gammaOutput, potentialID, closureID, cFuncMatrix, T, TFlag, alpha, EZ, rmax, nrho, printFlag);
-
-    // Ramp up density
-    while (kj <= 1) {
-        for (k = 0; k < ncols; k++) {
-            for (i = 0; i < nrows; i++) {
-                gammaInput1[i*ncols + k] = gammaOutput[i*ncols + k];
-            }
-        }
-        kj++;
-        rho = kj * drho;
-        T = dT * kj;
-        Ng(kj, gammaInput1, gammaOutput, potentialID, closureID, cFuncMatrix, T, TFlag, alpha, EZ, rmax, nrho, printFlag);
-    }
-
-    Extrap(gammaInput1, gammaOutput, rho, drho);
-
-    while(true) {
-        for (k = 0; k < ncols; k++) {
-            for (i = 0; i < nrows; i++) {
-                gammaInput2[i*ncols + k] = gammaOutput[i*ncols + k];
-            }
-        }
-
-        kj++;
-        rho = kj * drho;
-        T = dT * kj;
-
-        Ng(kj, gammaInput1, gammaOutput, potentialID, closureID, cFuncMatrix, T, TFlag, alpha, EZ, rmax, nrho, printFlag);
-
-        if (kj == nrho) {
-            break;
+            kj = nrho;
+            rho = rhoa;
+            T = 1.0;
         } else {
-            Extrap(gammaInput2, gammaOutput, rho, drho);
+            fprintf(stderr, "[Warm-Start] Failed to load '%s'. Falling back to cold-start density ramp.\n", init_file);
+        }
+    }
+
+    if (!warm_started) {
+        for (k = 0; k < ncols; k++) {
+            for (i = 0; i < nrows; i++) {
+                gammaInput1[i*ncols + k] = 0.0;
+            }
+        }
+
+        // Initialize density ramp
+        dT = 1.0 / ((double) nrho);
+        drho = rhoa / ((double) nrho);
+
+        kj = 1;
+        rho = kj * drho;
+        T = dT * kj;
+
+        // Initial guess
+        Ng(kj, gammaInput1, gammaOutput, potentialID, closureID, cFuncMatrix, T, TFlag, alpha, EZ, rmax, nrho, printFlag);
+
+        // Ramp up density
+        while (kj <= 1) {
             for (k = 0; k < ncols; k++) {
                 for (i = 0; i < nrows; i++) {
-                    gammaInput1[i*ncols + k] = gammaInput2[i*ncols + k];
+                    gammaInput1[i*ncols + k] = gammaOutput[i*ncols + k];
+                }
+            }
+            kj++;
+            rho = kj * drho;
+            T = dT * kj;
+            Ng(kj, gammaInput1, gammaOutput, potentialID, closureID, cFuncMatrix, T, TFlag, alpha, EZ, rmax, nrho, printFlag);
+        }
+
+        Extrap(gammaInput1, gammaOutput, rho, drho);
+
+        while(true) {
+            for (k = 0; k < ncols; k++) {
+                for (i = 0; i < nrows; i++) {
+                    gammaInput2[i*ncols + k] = gammaOutput[i*ncols + k];
+                }
+            }
+
+            kj++;
+            rho = kj * drho;
+            T = dT * kj;
+
+            Ng(kj, gammaInput1, gammaOutput, potentialID, closureID, cFuncMatrix, T, TFlag, alpha, EZ, rmax, nrho, printFlag);
+
+            if (kj == nrho) {
+                break;
+            } else {
+                Extrap(gammaInput2, gammaOutput, rho, drho);
+                for (k = 0; k < ncols; k++) {
+                    for (i = 0; i < nrows; i++) {
+                        gammaInput1[i*ncols + k] = gammaInput2[i*ncols + k];
+                    }
                 }
             }
         }
@@ -658,12 +798,14 @@ void OZ2(double *Sk, double *Gr, double *Gamma, int potentialID, int closureID, 
             break;
     }
 
-    // Final calculation and output
-    T = 1.0;
-    TFlag = 1.0;
-    rho = rhoa;
-
-    Ng(kj, gammaInput1, gammaOutput, potentialID, closureID, cFuncMatrix, T, TFlag, alpha, EZ, rmax, nrho, printFlag);
+    // For Rogers-Young, alpha was adjusted so a final solve with the optimized alpha is required.
+    // For PY and HNC, gammaOutput is already fully converged from the previous step.
+    if (closureID == 3) {
+        T = 1.0;
+        TFlag = 1.0;
+        rho = rhoa;
+        Ng(kj, gammaInput1, gammaOutput, potentialID, closureID, cFuncMatrix, T, TFlag, alpha, EZ, rmax, nrho, printFlag);
+    }
 
     Escribe(gammaOutput, cFuncMatrix, Sk, Gr, Gamma, potentialID, closureID, folderName);
 
